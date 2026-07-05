@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🏆 بطولة الخروج — فعاليات تيك توك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root{
+  --bg:#06060b;--bg2:#0a0a14;--card:#0c0c16;--card2:#10101e;--card3:#161628;--border:#1c1c2e;
+  --accent:#0891b2;--accent2:#22d3ee;--gold:#f5c542;
+  --text:#e8eaf2;--muted:#8a8fa3;
+  --green:#22c55e;--red:#ef4444;--purple:#a855f7;--orange:#f97316;--blue:#3b82f6
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min-height:100vh;padding:18px 12px 60px}
+
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:900}
+.status-badge.live{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#86efac}
+.status-badge.pause{background:rgba(245,197,66,.13);border:1px solid rgba(245,197,66,.4);color:#fde68a}
+.status-badge.off{background:rgba(125,125,125,.1);border:1px solid #444;color:#999}
+.status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.status-badge.live .dot{animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.btn{font-family:inherit;font-weight:900;border:none;border-radius:12px;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(8,145,178,.35)}
+.btn-success{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(34,197,94,.35)}
+.btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(239,68,68,.35)}
+.btn-warn{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;font-size:.88rem}
+.btn-gold{background:linear-gradient(135deg,#d9a406,#f5c542);color:#241a00;padding:10px 20px;font-size:.88rem}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);padding:9px 16px;font-size:.82rem}
+.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-sm{padding:6px 12px;font-size:.75rem;border-radius:9px}
+
+.input,.select{background:var(--card3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:10px;font-family:inherit;font-size:.82rem;outline:none;transition:.2s;width:100%}
+.input:focus,.select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.field-label{display:block;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:5px}
+
+.topnav{max-width:760px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between}
+.topnav a{color:var(--accent2);text-decoration:none;font-weight:900;font-size:.8rem;border:1px solid var(--border);padding:7px 14px;border-radius:30px;background:var(--card);transition:.2s}
+.topnav a:hover{border-color:var(--accent2)}
+.topnav .who{font-size:.8rem;color:var(--muted);font-weight:900;direction:ltr}
+
+/* Wizard */
+.wizard{max-width:760px;margin:0 auto}
+.wiz-progress{display:flex;align-items:center;gap:0;margin-bottom:24px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:14px 16px}
+.wstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;cursor:pointer}
+.wstep .wnum{width:32px;height:32px;border-radius:50%;background:var(--card2);border:2px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem;transition:.3s;z-index:2}
+.wstep .wlabel{font-size:.72rem;font-weight:900;color:var(--muted)}
+.wstep.done .wnum{background:var(--green);border-color:var(--green);color:#fff}
+.wstep.done .wlabel{color:#86efac}
+.wstep.active .wnum{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:var(--accent2);color:#fff;box-shadow:0 0 18px rgba(34,211,238,.4)}
+.wstep.active .wlabel{color:var(--accent2)}
+.wline{flex:0 0 60px;height:2px;background:var(--border);position:relative;top:-12px}
+.wline.done{background:var(--green)}
+
+.wiz-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:14px}
+.wiz-card h3{font-size:1.05rem;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.wiz-card .wd{font-size:.78rem;color:var(--muted);margin-bottom:18px}
+.wpanel{display:none}
+.wpanel.active{display:block}
+
+.wiz-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
+
+.q-bank{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
+.q-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.15s}
+.q-item:hover{border-color:var(--accent2)}
+.q-item.used{opacity:.25}
+.q-item .qn{background:var(--card3);color:var(--muted);width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7rem;flex-shrink:0}
+.q-item .qt{flex:1;font-size:.82rem;font-weight:700}
+.q-item .qcat{font-size:.66rem;color:#86efac;background:rgba(34,197,94,.08);padding:2px 8px;border-radius:6px;white-space:nowrap}
+
+.wiz-actions{display:flex;justify-content:space-between;align-items:center;padding-top:18px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap}
+
+/* Stats */
+.stats-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;max-width:760px;margin-left:auto;margin-right:auto}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
+.stat-card-num{font-size:1.6rem;font-weight:900}
+.stat-card-label{font-size:.68rem;color:var(--muted);margin-top:2px;font-weight:700}
+
+/* Options with radio */
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opt-input{position:relative;margin-bottom:10px}
+.opt-input .input{padding-left:38px}
+.opt-radio{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:19px;height:19px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.6rem;transition:.15s;color:transparent}
+.opt-radio.selected{background:var(--green);border-color:var(--green);color:#fff}
+
+/* Players */
+.player-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
+.player-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;font-size:.8rem;border:1px solid var(--border)}
+.player-item.alive{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2)}
+.player-item.dead{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.15);opacity:.4;text-decoration:line-through}
+.player-name{flex:1;font-weight:900}
+.empty{text-align:center;padding:22px;color:var(--muted);font-size:.78rem}
+
+.obs-link{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:.7rem;color:var(--accent2);display:flex;align-items:center;gap:8px;font-family:monospace}
+.obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
+
+@media(max-width:600px){
+  .wiz-progress{padding:10px 8px}
+  .wline{flex:0 0 20px}
+  .wstep .wlabel{font-size:.65rem}
+  .stats-cards{grid-template-columns:repeat(2,1fr)}
+  .row2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <a href="/admin.html">← لوحة الأدمن</a>
+  <span style="display:flex;align-items:center;gap:10px">
+    <span class="status-badge off" id="status-badge"><span class="dot"></span> <span id="status-txt">متوقف</span></span>
+    <span class="who" id="who">—</span>
+  </span>
+</div>
+
+<div class="stats-cards">
+  <div class="stat-card"><div class="stat-card-num" id="s-alive" style="color:#86efac">0</div><div class="stat-card-label">باقي</div></div>
+  <div class="stat-card"><div class="stat-card-num" id="s-round" style="color:var(--gold)">0</div><div class="stat-card-label">الجولة</div></div>
+  <div class="stat-card"><div class="stat-card-num" id="s-elim" style="color:#fca5a5">0</div><div class="stat-card-label">طلعوا</div></div>
+  <div class="stat-card"><div class="stat-card-num" id="s-total" style="color:var(--accent2)">0</div><div class="stat-card-label">إجمالي</div></div>
+</div>
+
+<div class="wizard">
+
+  <!-- Progress -->
+  <div class="wiz-progress">
+    <div class="wstep active" id="ws-1" onclick="goStep(1)"><div class="wnum">1</div><div class="wlabel">التسجيل</div></div>
+    <div class="wline" id="wl-1"></div>
+    <div class="wstep" id="ws-2" onclick="goStep(2)"><div class="wnum">2</div><div class="wlabel">الأسئلة</div></div>
+    <div class="wline" id="wl-2"></div>
+    <div class="wstep" id="ws-3" onclick="goStep(3)"><div class="wnum">3</div><div class="wlabel">التشغيل</div></div>
+    <div class="wline" id="wl-3"></div>
+    <div class="wstep" id="ws-4" onclick="goStep(4)"><div class="wnum">4</div><div class="wlabel">اللاعبين</div></div>
+  </div>
+
+  <!-- Step 1: Registration -->
+  <div class="wpanel active" id="wp-1">
+    <div class="wiz-card">
+      <h3>📝 التسجيل</h3>
+      <div class="wd">حدّد كلمة التسجيل وافتح الباب للجمهور — كل من يكتبها في الشات ينضم للبطولة</div>
+      <div class="wiz-fields">
+        <div>
+          <label class="field-label">كلمة التسجيل</label>
+          <input class="input" type="text" id="keyword" value="بطولة">
+        </div>
+        <div>
+          <label class="field-label">الحد الأقصى للاعبين</label>
+          <input class="input" type="number" id="max-players" value="16" min="4" max="64">
+        </div>
+        <div>
+          <label class="field-label">وقت الإجابة (ثواني)</label>
+          <input class="input" type="number" id="answer-time" value="15" min="5" max="60">
+        </div>
+      </div>
+      <div class="wiz-actions">
+        <button class="btn btn-success" style="flex:1" onclick="openRegistration()">📝 فتح التسجيل</button>
+        <button class="btn btn-danger" style="flex:1" onclick="lockRegistration()">🔒 إيقاف التسجيل والانتقال للأسئلة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 2: Questions -->
+  <div class="wpanel" id="wp-2">
+    <div class="wiz-card">
+      <h3>❓ بنك الأسئلة</h3>
+      <div class="wd">اضغط على أي سؤال لطرحه فوراً — الأسئلة المستخدمة تظهر باهتة</div>
+      <div class="q-bank" id="q-bank"></div>
+    </div>
+    <div class="wiz-card">
+      <h3>✍️ سؤال مخصص</h3>
+      <div class="wd">اكتب سؤالك وحدّد الإجابة الصحيحة بالضغط على الدائرة</div>
+      <div style="margin-bottom:10px"><input class="input" type="text" id="custom-q" placeholder="اكتب السؤال..."></div>
+      <div class="row2">
+        <div class="opt-input"><input class="input" type="text" id="co-1" placeholder="الخيار 1"><div class="opt-radio selected" id="cr-1" onclick="setC(1)">✓</div></div>
+        <div class="opt-input"><input class="input" type="text" id="co-2" placeholder="الخيار 2"><div class="opt-radio" id="cr-2" onclick="setC(2)">✓</div></div>
+      </div>
+      <div class="row2">
+        <div class="opt-input"><input class="input" type="text" id="co-3" placeholder="الخيار 3"><div class="opt-radio" id="cr-3" onclick="setC(3)">✓</div></div>
+        <div class="opt-input"><input class="input" type="text" id="co-4" placeholder="الخيار 4"><div class="opt-radio" id="cr-4" onclick="setC(4)">✓</div></div>
+      </div>
+      <div class="wiz-actions">
+        <button class="btn btn-primary" style="width:100%" onclick="askCustom()">▶ اطرح السؤال المخصص</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Run -->
+  <div class="wpanel" id="wp-3">
+    <div class="wiz-card">
+      <h3>🎮 التشغيل</h3>
+      <div class="wd">الوضع التلقائي يطرح سؤال عشوائي، يكشف الإجابة، وينتقل للسؤال التالي حتى يبقى فائز واحد</div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button class="btn btn-warn" id="auto-btn" onclick="toggleAuto()" style="flex:1;font-size:.95rem;padding:13px">▶ بدء الأسئلة التلقائية</button>
+      </div>
+      <div class="wiz-actions" style="border-top:none;padding-top:0">
+        <button class="btn btn-gold" style="flex:1" onclick="nextFromBank()">⏭ سؤال عشوائي</button>
+        <button class="btn btn-success" style="flex:1" onclick="revealAnswer()">🔓 اكشف الإجابة</button>
+        <button class="btn btn-danger" style="flex:1" onclick="stopGame()">⏹ إيقاف البطولة</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4: Players -->
+  <div class="wpanel" id="wp-4">
+    <div class="wiz-card">
+      <h3>👥 اللاعبين</h3>
+      <div class="wd">الأخضر باقي في البطولة — الأحمر خرج</div>
+      <div class="player-list" id="player-list"><div class="empty">لا يوجد لاعبين</div></div>
+    </div>
+  </div>
+
+  <!-- OBS link (always visible) -->
+  <div class="wiz-card" style="padding:14px 18px">
+    <div style="font-size:.72rem;color:var(--muted);font-weight:900;margin-bottom:8px">🔗 رابط الـ Overlay لـ OBS</div>
+    <div class="obs-link"><b id="overlay-link">—</b><button class="btn btn-sm btn-ghost" onclick="copyLink()">📋 نسخ</button></div>
+  </div>
+
+</div>
+
+<script>
+var QS=[
+  {q:"ما عاصمة فرنسا؟",opts:["لندن","باريس","برلين","مدريد"],correct:2},
+  {q:"كم عدد قارات العالم؟",opts:["5","6","7","8"],correct:3},
+  {q:"ما أكبر كوكب؟",opts:["زحل","المشتري","نبتون","أورانوس"],correct:2},
+  {q:"من مخترع الهاتف؟",opts:["أديسون","بل","تسلا","نيوتن"],correct:2},
+  {q:"ما عاصمة اليابان؟",opts:["بكين","سيول","طوكيو","بانكوك"],correct:3},
+  {q:"كم ضلع للمربع؟",opts:["3","4","5","6"],correct:2},
+  {q:"ما أصغر قارة؟",opts:["أوروبا","أستراليا","أنتاركتيكا","أفريقيا"],correct:2},
+  {q:"ما لون السماء؟",opts:["أحمر","أخضر","أزرق","أصفر"],correct:3},
+  {q:"كم ساعة في اليوم؟",opts:["12","20","24","48"],correct:3},
+  {q:"ما أطول حيوان؟",opts:["الفيل","الزرافة","الحوت","الجمل"],correct:2},
+  {q:"أين يقع تاج محل؟",opts:["مصر","الهند","تركيا","إيران"],correct:2},
+  {q:"ما عملة بريطانيا؟",opts:["يورو","دولار","جنيه","فرنك"],correct:3},
+  {q:"كم لاعب بفريق السلة؟",opts:["5","7","9","11"],correct:1},
+  {q:"ما أصلب معدن؟",opts:["الحديد","الذهب","الألماس","التيتانيوم"],correct:3},
+  {q:"من كتب المتنبي؟",opts:["شعر","رواية","تاريخ","فلسفة"],correct:1},
+  {q:"ما البحر الذي بين السعودية ومصر؟",opts:["المتوسط","الأحمر","العربي","الميت"],correct:2},
+  {q:"كم شهر بالسنة؟",opts:["10","11","12","13"],correct:3},
+  {q:"ما الغاز الذي تحتاجه النار؟",opts:["نيتروجين","أكسجين","هيدروجين","هيليوم"],correct:2},
+  {q:"من اكتشف أمريكا؟",opts:["كولومبوس","ماجلان","فاسكو","كوك"],correct:1},
+  {q:"ما أكبر صحراء؟",opts:["الربع الخالي","الصحراء الكبرى","صحراء غوبي","كالاهاري"],correct:2},
+  {q:"ما عاصمة تركيا؟",opts:["إسطنبول","أنقرة","إزمير","أنطاليا"],correct:2},
+  {q:"كم عدد أسنان الإنسان البالغ؟",opts:["28","30","32","34"],correct:3},
+  {q:"ما أسرع طائر في العالم؟",opts:["النسر","الصقر الشاهين","البومة","النعامة"],correct:2},
+  {q:"ما الدولة صاحبة أكبر عدد سكان؟",opts:["الصين","الهند","أمريكا","إندونيسيا"],correct:2},
+  {q:"كم عدد أحرف اللغة الإنجليزية؟",opts:["24","26","28","30"],correct:2},
+  {q:"ما المعدن الأغلى في العالم؟",opts:["الذهب","البلاتين","الروديوم","الفضة"],correct:3},
+  {q:"أين يوجد أطول برج في العالم؟",opts:["السعودية","الإمارات","الصين","ماليزيا"],correct:2},
+  {q:"ما الكوكب الأحمر؟",opts:["المشتري","زحل","المريخ","الزهرة"],correct:3},
+  {q:"كم عدد أركان الإيمان؟",opts:["5","6","7","8"],correct:2},
+  {q:"ما أكبر بحيرة في العالم؟",opts:["بحيرة فيكتوريا","بحر قزوين","البحيرات العظمى","بحيرة بايكال"],correct:2},
+  {q:"من مؤلف هاري بوتر؟",opts:["تولكين","رولينغ","لويس","كينغ"],correct:2},
+  {q:"ما العضو المسؤول عن تنقية الدم؟",opts:["القلب","الكبد","الكلى","الرئة"],correct:3},
+  {q:"كم عدد ألوان العلم السعودي؟",opts:["1","2","3","4"],correct:2},
+  {q:"ما أول شهر في التقويم الهجري؟",opts:["رجب","محرم","صفر","ربيع الأول"],correct:2},
+  {q:"ما الحيوان صاحب أقوى فك؟",opts:["الأسد","التمساح","القرش","الضبع"],correct:2},
+  {q:"أي مدينة تُلقب بمدينة الضباب؟",opts:["باريس","نيويورك","لندن","طوكيو"],correct:3},
+  {q:"ما أطول عظمة في جسم الإنسان؟",opts:["العضد","الفخذ","الساق","العمود الفقري"],correct:2},
+  {q:"كم عدد أجنحة النحلة؟",opts:["2","4","6","8"],correct:2},
+  {q:"ما أصغر دولة عربية مساحة؟",opts:["لبنان","قطر","البحرين","الكويت"],correct:3},
+  {q:"من هو أول رائد فضاء؟",opts:["أرمسترونغ","غاغارين","ألدرن","شيبرد"],correct:2},
+  {q:"ما العنصر الأكثر وفرة في الكون؟",opts:["الأكسجين","الهيدروجين","الهيليوم","الكربون"],correct:2},
+  {q:"كم عدد بطولات كأس العالم التي فازت بها البرازيل؟",opts:["3","4","5","6"],correct:3},
+  {q:"ما اللون الذي يمتص الحرارة أكثر؟",opts:["الأبيض","الأسود","الأحمر","الأزرق"],correct:2},
+  {q:"أين تقع ساعة بيغ بن؟",opts:["باريس","برلين","لندن","روما"],correct:3},
+  {q:"ما الفيتامين الذي يأتي من الشمس؟",opts:["A","B","C","D"],correct:4},
+  {q:"كم عدد الكواكب في المجموعة الشمسية؟",opts:["7","8","9","10"],correct:2},
+  {q:"ما المحيط بين أمريكا وأوروبا؟",opts:["الهادئ","الهندي","الأطلسي","المتجمد"],correct:3},
+  {q:"ما أكبر غدة في جسم الإنسان؟",opts:["الدرقية","البنكرياس","الكبد","الغدة النخامية"],correct:3},
+  {q:"كم يوم في شهر فبراير بالسنة الكبيسة؟",opts:["27","28","29","30"],correct:3},
+  {q:"ما عملة الصين؟",opts:["ين","وون","يوان","باهت"],correct:3},
+  {q:"من بنى سور الصين العظيم؟",opts:["المغول","الصينيون","اليابانيون","الكوريون"],correct:2},
+  {q:"ما أقرب نجم للأرض؟",opts:["القمر","الشمس","سيريوس","ألفا سنتوري"],correct:2},
+  {q:"كم عدد اللاعبين في فريق الكريكت؟",opts:["9","10","11","12"],correct:3},
+  {q:"ما أطول سورة في القرآن؟",opts:["آل عمران","النساء","البقرة","الأنعام"],correct:3},
+  {q:"ما الغاز المستخدم في البالونات الطائرة؟",opts:["الأكسجين","النيتروجين","الهيليوم","الهيدروجين"],correct:3},
+  {q:"أي حيوان يُسمى ملك الغابة؟",opts:["النمر","الفيل","الأسد","الدب"],correct:3},
+  {q:"ما أكثر رياضة شعبية في العالم؟",opts:["كرة السلة","التنس","الكريكت","كرة القدم"],correct:4},
+  {q:"كم عدد خلفاء الراشدين؟",opts:["3","4","5","6"],correct:2},
+  {q:"ما الدولة صاحبة أكبر مساحة في العالم؟",opts:["الصين","كندا","أمريكا","روسيا"],correct:4},
+  {q:"ما المادة التي تغطي الأسنان؟",opts:["العاج","المينا","الكالسيوم","الكيراتين"],correct:2},
+  {q:"كم عين للعنكبوت عادة؟",opts:["2","4","6","8"],correct:4},
+  {q:"ما أقدم حضارة في التاريخ؟",opts:["المصرية","السومرية","الرومانية","الصينية"],correct:2},
+  {q:"ما الطائر الذي يستطيع الطيران للخلف؟",opts:["النسر","البطريق","الطائر الطنان","البومة"],correct:3},
+  {q:"كم عدد أوتار الجيتار الكلاسيكي؟",opts:["4","5","6","7"],correct:3},
+  {q:"ما أسرع حيوان بحري؟",opts:["الدولفين","سمكة الشراع","القرش","الحوت"],correct:2},
+  {q:"ما المعدن السائل في درجة حرارة الغرفة؟",opts:["الرصاص","الزئبق","القصدير","الألومنيوم"],correct:2},
+  {q:"أين يقع البحر الميت؟",opts:["مصر","تركيا","الأردن وفلسطين","لبنان"],correct:3},
+  {q:"ما أكبر جزيرة في العالم؟",opts:["مدغشقر","بورنيو","غرينلاند","سومطرة"],correct:3},
+  {q:"كم ركعة في صلاة الظهر؟",opts:["2","3","4","5"],correct:3},
+  {q:"ما الحيوان الذي لا يشرب الماء؟",opts:["الجمل","الكنغر","الكوالا","الفأر الكنغري"],correct:4},
+  {q:"من اخترع الطائرة؟",opts:["أديسون","الأخوان رايت","تسلا","بل"],correct:2},
+  {q:"ما أقصر سورة في القرآن؟",opts:["الإخلاص","الكوثر","الفلق","الناس"],correct:2},
+  {q:"كم عدد عظام جسم الإنسان البالغ؟",opts:["106","156","206","256"],correct:3},
+  {q:"ما لون دم الأخطبوط؟",opts:["أحمر","أصفر","أزرق","أخضر"],correct:3},
+  {q:"أين تقع أعلى قمة في العالم؟",opts:["الصين","باكستان","نيبال","الهند"],correct:3},
+  {q:"ما اسم صغير الأسد؟",opts:["جرو","شبل","مهر","حمل"],correct:2},
+  {q:"كم عدد حواس الإنسان؟",opts:["4","5","6","7"],correct:2},
+  {q:"ما المادة الصلبة الوحيدة التي تتحول لسائل بالتسخين؟",opts:["الحديد","الجليد","الألماس","الملح"],correct:2},
+  {q:"ما أكثر عنصر في الغلاف الجوي؟",opts:["الأكسجين","النيتروجين","الكربون","الهيدروجين"],correct:2},
+  {q:"ما عاصمة كندا؟",opts:["تورنتو","فانكوفر","أوتاوا","مونتريال"],correct:3},
+  {q:"كم عدد أسنان القط؟",opts:["20","26","30","34"],correct:3},
+  {q:"ما أكبر عضو داخلي في جسم الإنسان؟",opts:["القلب","الكبد","الدماغ","الرئة"],correct:2},
+  {q:"ما الدولة التي اخترعت البيتزا؟",opts:["فرنسا","إيطاليا","أمريكا","إسبانيا"],correct:2},
+  {q:"كم عدد النجوم على علم أمريكا؟",opts:["48","50","51","52"],correct:2},
+  {q:"ما أقدم جامعة في العالم؟",opts:["أكسفورد","القرويين","بولونيا","الأزهر"],correct:2},
+  {q:"ما الحيوان الذي لا يصدر صوتاً؟",opts:["الأرنب","القط","الزرافة","السلحفاة"],correct:3},
+  {q:"ما أكبر دولة أفريقية مساحة؟",opts:["مصر","نيجيريا","الجزائر","السودان"],correct:3},
+  {q:"كم عدد فقرات العمود الفقري؟",opts:["26","30","33","36"],correct:3},
+  {q:"ما اللغة الرسمية للبرازيل؟",opts:["الإسبانية","البرتغالية","الفرنسية","الإنجليزية"],correct:2},
+  {q:"ما أعلى شلال في العالم؟",opts:["نياغرا","أنجل","فيكتوريا","إقوازو"],correct:2},
+  {q:"كم عدد أصابع القط؟",opts:["16","18","20","22"],correct:2},
+  {q:"ما الكوكب صاحب أكثر أقمار؟",opts:["المشتري","زحل","أورانوس","نبتون"],correct:2},
+  {q:"ما أول عنصر في الجدول الدوري؟",opts:["الأكسجين","الهيدروجين","الهيليوم","الكربون"],correct:2},
+  {q:"أين يقع مسجد قرطبة؟",opts:["المغرب","تركيا","إسبانيا","تونس"],correct:3},
+  {q:"ما الحيوان الوحيد الذي يطير من الثدييات؟",opts:["السنجاب","الخفاش","الطائر الطنان","البومة"],correct:2},
+  {q:"ما عدد أحرف الأبجدية اليابانية هيراغانا؟",opts:["26","46","52","72"],correct:2},
+  {q:"ما أكثر معدن وفرة في الأرض؟",opts:["الذهب","الحديد","الألومنيوم","النحاس"],correct:3},
+  {q:"ما الحيوان الذي ينام وعيناه مفتوحتان؟",opts:["الأسد","الدولفين","السمكة","الثعبان"],correct:3},
+  {q:"كم يوماً يحتاج القمر ليدور حول الأرض؟",opts:["21","25","27","30"],correct:3},
+  {q:"ما أصغر عظمة في جسم الإنسان؟",opts:["في اليد","في القدم","في الأذن","في الأنف"],correct:3},
+  {q:"أين ولد النبي محمد ﷺ؟",opts:["المدينة","مكة","الطائف","جدة"],correct:2},
+  {q:"ما الفاكهة التي تحتوي أكثر فيتامين C؟",opts:["البرتقال","الليمون","الجوافة","الكيوي"],correct:3},
+  {q:"كم عدد الدول في قارة أفريقيا؟",opts:["44","48","54","60"],correct:3},
+  {q:"ما البحر الذي يفصل بين أوروبا وأفريقيا؟",opts:["الأحمر","المتوسط","الأسود","الأدرياتيكي"],correct:2},
+  {q:"ما الغاز الذي يجعل المشروبات الغازية فوارة؟",opts:["الأكسجين","النيتروجين","ثاني أكسيد الكربون","الهيليوم"],correct:3},
+  {q:"كم قلب للأخطبوط؟",opts:["1","2","3","4"],correct:3},
+  {q:"ما أول دولة استخدمت الطوابع البريدية؟",opts:["فرنسا","بريطانيا","ألمانيا","أمريكا"],correct:2},
+  {q:"ما الكوكب الأكثر سخونة؟",opts:["عطارد","الزهرة","المريخ","المشتري"],correct:2},
+  {q:"ما أطول حرب في التاريخ؟",opts:["حرب 100 عام","حرب 30 عام","حرب 335 عام","حرب 7 سنوات"],correct:3},
+  {q:"ما الدولة التي لا تملك جيشاً؟",opts:["سويسرا","أيسلندا","كوستاريكا","لوكسمبورغ"],correct:3},
+  {q:"كم عدد أذرع الأخطبوط؟",opts:["6","8","10","12"],correct:2},
+  {q:"ما الطائر الذي لا يطير؟",opts:["النسر","البطريق","الصقر","الحمام"],correct:2},
+  {q:"ما أقدم رياضة في التاريخ؟",opts:["كرة القدم","السباحة","المصارعة","الجري"],correct:3},
+  {q:"ما الحيوان صاحب أطول رقبة؟",opts:["الجمل","النعامة","الزرافة","الفيل"],correct:3},
+  {q:"كم لتر دم في جسم الإنسان البالغ؟",opts:["3","5","7","10"],correct:2},
+  {q:"ما عاصمة أستراليا؟",opts:["سيدني","ملبورن","كانبيرا","بريزبن"],correct:3},
+  {q:"ما الحيوان الذي يُسمى أبو الأشبال؟",opts:["النمر","الأسد","الفهد","الدب"],correct:2},
+  {q:"ما المعدن الذي يُستخدم في صناعة النقود؟",opts:["الذهب","النحاس","الألومنيوم","الحديد"],correct:2},
+  {q:"ما أكثر لغة يتحدثها الناس كلغة أم؟",opts:["الإنجليزية","الصينية","الإسبانية","الهندية"],correct:2},
+  {q:"ما أول حيوان أُرسل للفضاء؟",opts:["قرد","كلب","قط","فأر"],correct:2},
+  {q:"كم عدد دقائق مباراة كرة القدم؟",opts:["80","90","100","120"],correct:2},
+  {q:"ما اسم صغير الحصان؟",opts:["شبل","جرو","مهر","حمل"],correct:3},
+  {q:"ما أثقل حيوان يطير؟",opts:["النسر","الحبارى الكبيرة","البجع","طائر القطرس"],correct:2},
+  {q:"ما الشكل الذي له 6 أضلاع؟",opts:["المخمس","السداسي","السباعي","المثمن"],correct:2},
+  {q:"ما أول سورة نزلت في القرآن؟",opts:["الفاتحة","البقرة","العلق","المدثر"],correct:3},
+  {q:"ما عاصمة البرازيل؟",opts:["ريو دي جانيرو","ساو باولو","برازيليا","بوينس آيرس"],correct:3},
+  {q:"كم عدد أرجل العنكبوت؟",opts:["6","8","10","12"],correct:2},
+  {q:"ما أكبر هضبة في العالم؟",opts:["هضبة نجد","هضبة التبت","هضبة الأناضول","هضبة إثيوبيا"],correct:2},
+  {q:"ما الغاز المسبب للاحتباس الحراري؟",opts:["الأكسجين","ثاني أكسيد الكربون","النيتروجين","الهيليوم"],correct:2},
+  {q:"من صاحب لقب ذي النورين؟",opts:["أبو بكر","عمر","عثمان","علي"],correct:3},
+  {q:"كم عدد أوتار العود؟",opts:["4","5","6","7"],correct:2},
+  {q:"ما أكبر خليج في العالم؟",opts:["الخليج العربي","خليج المكسيك","خليج البنغال","خليج هدسون"],correct:2},
+  {q:"ما المادة التي تعطي الجزر لونه البرتقالي؟",opts:["فيتامين C","كاروتين","حديد","بوتاسيوم"],correct:2},
+  {q:"كم عدد الصلوات المفروضة؟",opts:["3","4","5","6"],correct:3},
+  {q:"ما أول مترو أنفاق في العالم؟",opts:["نيويورك","باريس","لندن","طوكيو"],correct:3},
+  {q:"ما الحيوان الذي يُعرف بأنه أذكى حيوان بحري؟",opts:["القرش","الحوت","الدولفين","الأخطبوط"],correct:3},
+  {q:"ما أكثر عنصر في جسم الإنسان؟",opts:["الكربون","الأكسجين","الهيدروجين","النيتروجين"],correct:2},
+  {q:"في أي قارة تقع مصر؟",opts:["آسيا","أفريقيا","أوروبا","الاثنين"],correct:2},
+  {q:"ما الكوكب الذي يدور على جانبه؟",opts:["نبتون","زحل","أورانوس","المشتري"],correct:3},
+  {q:"كم يبلغ عدد دول مجلس التعاون الخليجي؟",opts:["4","5","6","7"],correct:3},
+  {q:"ما المعدن الذي يدخل في صناعة الطائرات؟",opts:["الحديد","النحاس","الألومنيوم","الرصاص"],correct:3},
+  {q:"أين تقع مدينة البتراء؟",opts:["سوريا","لبنان","الأردن","العراق"],correct:3},
+  {q:"ما أكبر بركان نشط في أوروبا؟",opts:["فيزوف","إتنا","سترومبولي","هيكلا"],correct:2},
+  {q:"كم عدد آيات سورة الفاتحة؟",opts:["5","6","7","8"],correct:3},
+  {q:"ما أكبر مطار في العالم مساحة؟",opts:["هيثرو","مطار الملك فهد","دبي","شانغي"],correct:2},
+  {q:"ما أول دولة عربية تستضيف الأولمبياد؟",opts:["قطر","السعودية","لم تستضف بعد","مصر"],correct:3},
+  {q:"ما السورة التي تُسمى قلب القرآن؟",opts:["الرحمن","يس","الملك","الكهف"],correct:2},
+  {q:"كم عدد أنياب الإنسان؟",opts:["2","4","6","8"],correct:2},
+  {q:"ما أول جريدة عربية؟",opts:["الأهرام","الوقائع المصرية","الشرق الأوسط","الحياة"],correct:2},
+  {q:"ما البحر الذي لا يوجد فيه أسماك تقريباً؟",opts:["الأسود","الأحمر","الميت","قزوين"],correct:3},
+  {q:"كم يوماً في السنة الهجرية؟",opts:["354","360","365","370"],correct:1},
+  {q:"ما الرياضة الوطنية لكندا؟",opts:["كرة القدم","البيسبول","هوكي الجليد","كرة السلة"],correct:3},
+  {q:"من أول من وضع خريطة العالم؟",opts:["الإدريسي","ابن بطوطة","ماجلان","كولومبوس"],correct:1},
+  {q:"ما أصغر عضو في جسم الإنسان؟",opts:["العين","الغدة الصنوبرية","اللوزتين","الزائدة"],correct:2},
+  {q:"ما المدينة التي يُطلق عليها مدينة الألف مئذنة؟",opts:["إسطنبول","القاهرة","فاس","دمشق"],correct:2},
+  {q:"كم كيلو متر بين الأرض والقمر تقريباً؟",opts:["184 ألف","284 ألف","384 ألف","484 ألف"],correct:3},
+  {q:"ما النهر الذي يمر بباريس؟",opts:["الراين","الدانوب","السين","التايمز"],correct:3},
+  {q:"ما الطعام الذي لا يفسد أبداً؟",opts:["الأرز","العسل","الملح","السكر"],correct:2},
+  {q:"ما أول جامعة في العالم الإسلامي؟",opts:["الأزهر","القرويين","الزيتونة","بولونيا"],correct:2},
+  {q:"كم عدد الدول التي تحد السعودية؟",opts:["5","6","7","8"],correct:3},
+  {q:"ما الذي يسبب المد والجزر؟",opts:["الرياح","الشمس","القمر","حركة الأرض"],correct:3},
+  {q:"ما العملة الأغلى في العالم؟",opts:["الدولار","اليورو","الدينار الكويتي","الجنيه"],correct:3},
+  {q:"من مكتشف الدورة الدموية الصغرى؟",opts:["ابن النفيس","ابن سينا","الرازي","هارفي"],correct:1},
+  {q:"ما أول مدينة إسلامية بناها المسلمون؟",opts:["مكة","المدينة","البصرة","الكوفة"],correct:3},
+  {q:"كم عدد الجيوب الأنفية؟",opts:["2","4","6","8"],correct:2},
+  {q:"ما المحيط الأصغر في العالم؟",opts:["الهادئ","الأطلسي","الهندي","المتجمد الشمالي"],correct:4},
+  {q:"ما لون الصندوق الأسود في الطائرة؟",opts:["أسود","أبيض","برتقالي","أحمر"],correct:3},
+  {q:"ما أقوى عضلة في جسم الإنسان؟",opts:["القلب","الفخذ","الفك","اللسان"],correct:3},
+  {q:"أين ولد المسيح عيسى عليه السلام؟",opts:["القدس","بيت لحم","الناصرة","مكة"],correct:2},
+  {q:"ما أكثر فاكهة إنتاجاً في العالم؟",opts:["التفاح","البرتقال","الموز","العنب"],correct:3},
+  {q:"كم عدد الأسنان اللبنية عند الأطفال؟",opts:["16","18","20","24"],correct:3},
+  {q:"ما الحيوان الذي يستطيع النوم وهو واقف؟",opts:["البقرة","الحصان","الفيل","الزرافة"],correct:2},
+  {q:"من بنى قبة الصخرة؟",opts:["صلاح الدين","عبدالملك بن مروان","عمر بن الخطاب","هارون الرشيد"],correct:2},
+  {q:"ما السرعة القصوى للضوء؟",opts:["100 ألف كم/ث","200 ألف كم/ث","300 ألف كم/ث","400 ألف كم/ث"],correct:3},
+  {q:"ما أول حيوان استنسخه العلماء؟",opts:["فأر","قرد","نعجة","أرنب"],correct:3},
+  {q:"كم عدد السعرات في لتر الماء؟",opts:["0","10","50","100"],correct:1},
+  {q:"ما الحيوان الذي إذا قطعت ذراعه تنمو مرة أخرى؟",opts:["السحلية","الأخطبوط","نجم البحر","السلطعون"],correct:3},
+  {q:"ما أقدم لغة مكتوبة في التاريخ؟",opts:["العربية","السومرية","المصرية","الصينية"],correct:2},
+  {q:"كم عدد فقرات الرقبة عند الإنسان؟",opts:["5","7","9","12"],correct:2},
+  {q:"ما أسرع سمكة في العالم؟",opts:["القرش","التونة","سمكة الشراع","الدولفين"],correct:3},
+  {q:"ما الدولة العربية الوحيدة التي ليس لها صحراء؟",opts:["لبنان","تونس","المغرب","الأردن"],correct:1},
+  {q:"كم عدد أزواج الأعصاب الشوكية؟",opts:["21","26","31","36"],correct:3},
+  {q:"ما المعركة التي انتصر فيها صلاح الدين؟",opts:["اليرموك","القادسية","حطين","عين جالوت"],correct:3},
+  {q:"ما أكبر شبه جزيرة في العالم؟",opts:["شبه الجزيرة العربية","الهند","الملايو","ايبيريا"],correct:1},
+  {q:"كم عدد عيون النحلة؟",opts:["2","3","5","7"],correct:3},
+  {q:"ما أول عملة في الإسلام؟",opts:["الريال","الدرهم","الدينار","الليرة"],correct:3},
+  {q:"ما الفرق بين الوزن والكتلة؟",opts:["لا فرق","الوزن يتأثر بالجاذبية","الكتلة تتأثر بالجاذبية","الوزن ثابت"],correct:2},
+  {q:"ما أول من استخدم الصفر؟",opts:["العرب","الهنود","الإغريق","الصينيون"],correct:2},
+  {q:"كم تبلغ سرعة الصوت تقريباً؟",opts:["120 م/ث","240 م/ث","340 م/ث","500 م/ث"],correct:3},
+  {q:"ما الجزيرة الأكبر في البحر المتوسط؟",opts:["كريت","مالطا","صقلية","سردينيا"],correct:3},
+  {q:"من مؤسس علم الجبر؟",opts:["الخوارزمي","ابن سينا","الرازي","ابن الهيثم"],correct:1},
+  {q:"ما أطول كلمة في القرآن الكريم؟",opts:["فأسقيناكموه","فسيكفيكهم","اضطررتم","أنلزمكموها"],correct:1},
+  {q:"كم عدد أسماء الله الحسنى؟",opts:["77","88","99","100"],correct:3},
+  {q:"ما أثقل عضو في جسم الإنسان؟",opts:["الدماغ","القلب","الكبد","الجلد"],correct:4},
+  {q:"ما المحاصيل الأكثر زراعة في العالم؟",opts:["القمح","الأرز","الذرة","البطاطس"],correct:3},
+  {q:"أين يقع مثلث برمودا؟",opts:["المحيط الهادئ","المحيط الأطلسي","البحر المتوسط","المحيط الهندي"],correct:2},
+  {q:"كم عدد فصول السنة؟",opts:["2","3","4","5"],correct:3},
+  {q:"ما أول معركة بحرية في الإسلام؟",opts:["ذات الصواري","حطين","اليرموك","بدر"],correct:1},
+  {q:"ما نسبة الماء في جسم الإنسان تقريباً؟",opts:["40%","50%","60%","70%"],correct:4},
+  {q:"ما الحيوان الذي يملك أكبر عدد من الأسنان؟",opts:["القرش","التمساح","الحلزون","الفيل"],correct:3},
+  {q:"أين يقع أعمق نقطة في المحيط؟",opts:["المحيط الهادئ","المحيط الأطلسي","المحيط الهندي","المحيط المتجمد"],correct:1},
+  {q:"ما العنصر الكيميائي للذهب؟",opts:["Go","Gd","Au","Ag"],correct:3},
+  {q:"من أول من أذّن في الإسلام؟",opts:["عمر","بلال","أبو بكر","عثمان"],correct:2},
+  {q:"ما أسرع طريقة لانتقال الحرارة؟",opts:["التوصيل","الحمل","الإشعاع","الاحتكاك"],correct:3},
+  {q:"كم مرة ذُكر شهر رمضان في القرآن؟",opts:["1","2","3","4"],correct:1},
+  {q:"ما أكبر هرم في العالم حجماً؟",opts:["خوفو","خفرع","هرم تشولولا","منقرع"],correct:3},
+  {q:"ما الجهاز المسؤول عن تنظيم درجة حرارة الجسم؟",opts:["القلب","الدماغ","الجلد","الكلى"],correct:3},
+  {q:"كم عدد خلفاء الدولة الأموية؟",opts:["10","12","14","16"],correct:3},
+  {q:"ما أول من اخترع الساعة؟",opts:["الصينيون","المصريون","الرومان","العرب"],correct:2},
+  {q:"ما أقرب دولة لأستراليا؟",opts:["إندونيسيا","نيوزيلندا","بابوا غينيا الجديدة","الفلبين"],correct:3},
+  {q:"كم عدد عضلات جسم الإنسان؟",opts:["أكثر من 400","أكثر من 500","أكثر من 600","أكثر من 700"],correct:3},
+  {q:"ما المعدن الذي يوجد سائلاً في الطبيعة؟",opts:["الرصاص","الزئبق","القصدير","البروم"],correct:2},
+  {q:"ما أول دولة صنعت الورق؟",opts:["مصر","الصين","اليابان","الهند"],correct:2},
+  {q:"كم تستغرق الأرض للدوران حول نفسها؟",opts:["12 ساعة","18 ساعة","24 ساعة","36 ساعة"],correct:3},
+  {q:"ما الطائر الذي يضع أكبر بيضة؟",opts:["النسر","النعامة","البطريق","الديك الرومي"],correct:2},
+  {q:"ما أول خليفة أموي؟",opts:["عبدالملك","معاوية","يزيد","مروان"],correct:2},
+  {q:"ما الحيوان الذي له 3 قلوب؟",opts:["الحوت","الدولفين","الأخطبوط","نجم البحر"],correct:3},
+  {q:"كم يبلغ طول الأمعاء الدقيقة تقريباً؟",opts:["2 متر","4 أمتار","6 أمتار","8 أمتار"],correct:3},
+  {q:"ما أول مسجد بني في الإسلام؟",opts:["المسجد الحرام","المسجد النبوي","مسجد قباء","المسجد الأقصى"],correct:3},
+  {q:"ما الغاز الذي يملأ المنطاد؟",opts:["أكسجين","نيتروجين","هيليوم","هيدروجين"],correct:3},
+  {q:"ما أطول جسر بحري في العالم؟",opts:["جسر البحرين","جسر هونغ كونغ","جسر الملك فهد","جسر البوسفور"],correct:2},
+  {q:"كم عدد الأنبياء المذكورين في القرآن؟",opts:["20","25","28","30"],correct:2},
+];
+var params=new URLSearchParams(location.search),username=params.get('username')||'';
+var socket=io();if(username){socket.emit('join',{username});document.getElementById('who').textContent='@'+username;}
+document.getElementById('overlay-link').textContent=location.origin+'/knockout-overlay.html?username='+username;
+function copyLink(){navigator.clipboard.writeText(document.getElementById('overlay-link').textContent);var el=document.getElementById('overlay-link');el.style.color='#22c55e';setTimeout(function(){el.style.color='';},1200);}
+
+var correctAnswer=1,usedQs=new Set();
+var autoMode=false,autoTimer=null;
+
+function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function setC(n){correctAnswer=n;for(var i=1;i<=4;i++)document.getElementById('cr-'+i).classList.toggle('selected',i===n);}
+
+/* Wizard nav */
+var curStep=1;
+function goStep(n){
+  curStep=n;
+  for(var i=1;i<=4;i++){
+    document.getElementById('wp-'+i).classList.toggle('active',i===n);
+    var ws=document.getElementById('ws-'+i);
+    ws.classList.toggle('active',i===n);
+    ws.classList.toggle('done',i<n);
+    if(i<4){document.getElementById('wl-'+i).classList.toggle('done',i<n);}
+  }
+}
+
+function setBadge(cls,txt){
+  var b=document.getElementById('status-badge');
+  b.className='status-badge '+cls;
+  document.getElementById('status-txt').textContent=txt;
+}
+
+function toggleAuto(){
+  autoMode=!autoMode;
+  var btn=document.getElementById('auto-btn');
+  if(autoMode){
+    btn.textContent='⏸ إيقاف الأسئلة التلقائية';
+    btn.className='btn btn-danger';
+    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    autoNext();
+  } else {
+    btn.textContent='▶ بدء الأسئلة التلقائية';
+    btn.className='btn btn-warn';
+    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+  }
+}
+
+function autoNext(){
+  if(!autoMode) return;
+  nextFromBank();
+  var answerTime=parseInt(document.getElementById('answer-time').value)||15;
+  autoTimer=setTimeout(function(){
+    if(!autoMode) return;
+    revealAnswer();
+    autoTimer=setTimeout(function(){
+      if(!autoMode) return;
+      loadPlayers().then(function(){
+        var alive=parseInt(document.getElementById('s-alive').textContent)||0;
+        if(alive<=1){
+          autoMode=false;
+          var btn=document.getElementById('auto-btn');
+          btn.textContent='▶ بدء الأسئلة التلقائية';
+          btn.className='btn btn-warn';
+          btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+        } else {
+          autoNext();
+        }
+      });
+    },3000);
+  },answerTime*1000+3000);
+}
+
+async function openRegistration(){
+  await fetch('/api/knockout/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,keyword:document.getElementById('keyword').value.trim(),maxPlayers:parseInt(document.getElementById('max-players').value)||16})});
+  setBadge('live','📝 تسجيل مفتوح');
+  loadPlayers();
+}
+async function lockRegistration(){
+  await fetch('/api/knockout/lock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
+  setBadge('pause','🔒 جاهز');
+  loadPlayers();
+  goStep(2);
+}
+async function askQ(q,opts,correct){
+  var at=parseInt(document.getElementById('answer-time').value)||15;
+  await fetch('/api/knockout/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,question:q,options:opts,correct:correct,answerTime:at})});
+  setBadge('live','❓ سؤال مطروح');
+  goStep(3);
+}
+async function askCustom(){
+  var q=document.getElementById('custom-q').value.trim();
+  var opts=[document.getElementById('co-1').value.trim(),document.getElementById('co-2').value.trim(),document.getElementById('co-3').value.trim(),document.getElementById('co-4').value.trim()];
+  if(!q||opts.some(function(o){return !o;})){alert('أكمل السؤال والخيارات الأربعة');return;}
+  await askQ(q,opts,correctAnswer);
+}
+async function nextFromBank(){
+  var pool=QS.map(function(q,i){return{q:q.q,opts:q.opts,correct:q.correct,idx:i};}).filter(function(q){return !usedQs.has(q.idx);});
+  if(!pool.length){usedQs.clear();pool=QS.map(function(q,i){return{q:q.q,opts:q.opts,correct:q.correct,idx:i};});}
+  var pick=pool[Math.floor(Math.random()*pool.length)];
+  usedQs.add(pick.idx);
+  await askQ(pick.q,pick.opts,pick.correct);
+  renderBank();
+}
+async function revealAnswer(){await fetch('/api/knockout/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});setTimeout(loadPlayers,1000);}
+async function stopGame(){await fetch('/api/knockout/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});setBadge('off','متوقف');}
+
+async function loadPlayers(){
+  var res=await fetch('/api/knockout/'+username);var data=await res.json();
+  document.getElementById('s-alive').textContent=data.aliveCount||0;
+  document.getElementById('s-round').textContent=data.round||0;
+  document.getElementById('s-elim').textContent=(data.eliminated||[]).length;
+  document.getElementById('s-total').textContent=data.totalPlayers||0;
+  var el=document.getElementById('player-list');
+  var list=data.players||[];
+  if(!list.length){el.innerHTML='<div class="empty">لا يوجد لاعبين</div>';return;}
+  el.innerHTML=list.map(function(p){return '<div class="player-item '+(p.alive?'alive':'dead')+'"><span>'+(p.alive?'✅':'❌')+'</span><span class="player-name">'+esc(p.name)+'</span></div>';}).join('');
+}
+function renderBank(){
+  document.getElementById('q-bank').innerHTML=QS.map(function(q,i){return '<div class="q-item '+(usedQs.has(i)?'used':'')+'" onclick="askFromBank('+i+')"><div class="qn">'+(i+1)+'</div><div class="qt">'+esc(q.q)+'</div><div class="qcat">✓ '+esc(q.opts[q.correct-1])+'</div></div>';}).join('');
+}
+async function askFromBank(i){usedQs.add(i);await askQ(QS[i].q,QS[i].opts,QS[i].correct);renderBank();}
+
+socket.on('knockout:joined',function(d){loadPlayers();});
+socket.on('knockout:reveal',function(d){
+  loadPlayers();
+  if(d && d.winner){
+    autoMode=false;
+    var btn=document.getElementById('auto-btn');
+    btn.textContent='▶ بدء الأسئلة التلقائية';
+    btn.className='btn btn-warn';
+    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
+    setBadge('pause','🏆 عندنا فائز!');
+    goStep(4);
+  }
+});
+socket.on('knockout:locked',function(){loadPlayers();});
+socket.on('knockout:answered',function(d){
+  setBadge('live','❓ '+d.count+'/'+d.total+' جاوبوا');
+});
+renderBank();if(username)loadPlayers();
+</script>
+</body>
+</html>

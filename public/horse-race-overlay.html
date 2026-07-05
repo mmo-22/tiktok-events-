@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Horse Race Overlay</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{background:transparent;width:100vw;height:100vh;font-family:'Tajawal',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.main{position:relative;background:rgba(0,0,0,.92);border:2px solid rgba(168,85,247,.4);border-radius:22px;padding:22px 24px;width:620px;opacity:0;transition:opacity .15s;overflow:hidden}
+.main.show{opacity:1}
+.main::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:linear-gradient(90deg,#ef4444,#3b82f6,#22c55e,#fbbf24)}
+
+.title{font-size:16px;color:rgba(255,255,255,.4);text-align:center;margin-bottom:10px}.title span{color:#a855f7;font-weight:900}
+.phase-label{text-align:center;font-size:14px;color:#fbbf24;font-weight:700;margin-bottom:12px}
+
+.reg-info{text-align:center;font-size:15px;color:rgba(255,255,255,.6);margin-bottom:14px}
+.reg-info strong{color:#fff}
+
+.tracks{display:flex;flex-direction:column;gap:10px;margin-bottom:14px}
+.track{display:flex;align-items:center;gap:8px}
+.track-icon{font-size:20px;width:28px;text-align:center}
+.track-name{font-size:12px;color:rgba(255,255,255,.5);width:40px;text-align:center}
+.track-bar{flex:1;height:28px;background:rgba(255,255,255,.06);border-radius:8px;overflow:hidden;position:relative}
+.track-fill{height:100%;border-radius:8px;transition:width .3s ease;display:flex;align-items:center;justify-content:flex-end;padding:0 8px;min-width:28px}
+.track-fill.t1{background:linear-gradient(90deg,rgba(239,68,68,.3),rgba(239,68,68,.6))}
+.track-fill.t2{background:linear-gradient(90deg,rgba(59,130,246,.3),rgba(59,130,246,.6))}
+.track-fill.t3{background:linear-gradient(90deg,rgba(34,197,94,.3),rgba(34,197,94,.6))}
+.track-fill.t4{background:linear-gradient(90deg,rgba(251,191,36,.3),rgba(251,191,36,.6))}
+.track-horse{font-size:22px;filter:drop-shadow(0 0 4px rgba(255,255,255,.3));transition:transform .15s}
+.track-count{position:absolute;left:8px;top:50%;transform:translateY(-50%);font-size:11px;color:rgba(255,255,255,.4);font-weight:700}
+.finish-line{position:absolute;left:0;top:0;bottom:0;width:2px;background:repeating-linear-gradient(180deg,#fff 0,#fff 4px,transparent 4px,transparent 8px)}
+
+.team-counts{display:flex;justify-content:center;gap:16px;margin-bottom:10px}
+.tc{text-align:center;font-size:12px;color:rgba(255,255,255,.4)}
+.tc-num{font-size:18px;font-weight:900;color:#fff}
+
+.winner-overlay{position:absolute;inset:0;background:rgba(0,0,0,.88);backdrop-filter:blur(12px);display:none;flex-direction:column;align-items:center;justify-content:center;border-radius:22px;z-index:10}
+.winner-overlay.show{display:flex;animation:winIn .5s ease}
+.winner-icon{font-size:56px;margin-bottom:8px}
+.winner-text{font-size:28px;font-weight:900;color:#fff}
+.winner-sub{font-size:14px;color:rgba(255,255,255,.4);margin-top:4px}
+@keyframes winIn{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+</style>
+</head>
+<body>
+<div class="main" id="box">
+  <div class="title">🏁 <span>سباق الخيل</span></div>
+  <div class="phase-label" id="phase-label"></div>
+  <div class="reg-info" id="reg-info" style="display:none">اكتب <strong>1</strong> أو <strong>2</strong> أو <strong>3</strong> أو <strong>4</strong> عشان تختار فريقك!</div>
+  <div id="reg-slots" style="display:none;display:flex;flex-wrap:wrap;justify-content:center;gap:4px;margin-bottom:10px;max-height:36px;overflow:hidden"></div>
+  <div class="team-counts" id="team-counts" style="display:none">
+    <div class="tc">🔴<div class="tc-num" id="tc-1">0</div></div>
+    <div class="tc">🔵<div class="tc-num" id="tc-2">0</div></div>
+    <div class="tc">🟢<div class="tc-num" id="tc-3">0</div></div>
+    <div class="tc">🟡<div class="tc-num" id="tc-4">0</div></div>
+  </div>
+  <div class="tracks" id="tracks">
+    <div class="track"><span class="track-icon">🔴</span><div class="track-bar"><div class="track-fill t1" id="fill-1" style="width:2%"><span class="track-horse">🏇</span></div><span class="track-count" id="cnt-1">0</span></div></div>
+    <div class="track"><span class="track-icon">🔵</span><div class="track-bar"><div class="track-fill t2" id="fill-2" style="width:2%"><span class="track-horse">🏇</span></div><span class="track-count" id="cnt-2">0</span></div></div>
+    <div class="track"><span class="track-icon">🟢</span><div class="track-bar"><div class="track-fill t3" id="fill-3" style="width:2%"><span class="track-horse">🏇</span></div><span class="track-count" id="cnt-3">0</span></div></div>
+    <div class="track"><span class="track-icon">🟡</span><div class="track-bar"><div class="track-fill t4" id="fill-4" style="width:2%"><span class="track-horse">🏇</span></div><span class="track-count" id="cnt-4">0</span></div></div>
+  </div>
+  <div class="winner-overlay" id="winner-overlay">
+    <div class="winner-icon" id="w-icon">🏆</div>
+    <div class="winner-text" id="w-text"></div>
+    <div class="winner-sub">فاز بالسباق!</div>
+  </div>
+  <div class="confetti" id="confetti"></div>
+</div>
+<script>
+var params=new URLSearchParams(location.search),username=params.get('username')||'';
+var socket=io();if(username)socket.emit('join',{username});
+var finishLine=50;
+var COLORS=['','#ef4444','#3b82f6','#22c55e','#fbbf24'];
+var ICONS=['','🔴','🔵','🟢','🟡'];
+var NAMES=['','أحمر','أزرق','أخضر','أصفر'];
+
+socket.on('horse:register',function(d){
+  document.getElementById('box').classList.add('show');
+  document.getElementById('winner-overlay').classList.remove('show');
+  document.getElementById('phase-label').textContent='📝 اختر فريقك!';
+  document.getElementById('reg-info').style.display='block';
+  document.getElementById('reg-slots').style.display='flex';
+  document.getElementById('reg-slots').innerHTML='';
+  document.getElementById('team-counts').style.display='flex';
+  finishLine=d.finishLine||50;
+  for(var i=1;i<=4;i++){document.getElementById('fill-'+i).style.width='2%';document.getElementById('cnt-'+i).textContent='0';document.getElementById('tc-'+i).textContent='0';}
+});
+
+socket.on('horse:joined',function(d){
+  for(var i=1;i<=4;i++)document.getElementById('tc-'+i).textContent=d.teamCounts[i]||0;
+  // Add avatar
+  var el=document.getElementById('reg-slots');
+  var colors=['','#ef4444','#3b82f6','#22c55e','#fbbf24'];
+  var div=document.createElement('div');
+  div.style.cssText='width:28px;height:28px;border-radius:50%;border:2px solid '+colors[d.team]+';overflow:hidden;animation:winIn .3s ease';
+  if(d.avatar){div.innerHTML='<img src="'+d.avatar+'" style="width:100%;height:100%;object-fit:cover">';}
+  else{div.style.cssText+='display:flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);font-size:10px;color:rgba(255,255,255,.4)';div.textContent='✓';}
+  el.appendChild(div);
+});
+
+socket.on('horse:locked',function(d){
+  document.getElementById('reg-info').style.display='none';
+  document.getElementById('reg-slots').style.display='none';
+  document.getElementById('phase-label').textContent='🔒 التسجيل مقفل — '+d.total+' لاعب';
+});
+
+socket.on('horse:race',function(d){
+  document.getElementById('phase-label').textContent='🏁 السباق بدأ! اكتب أي شيء!';
+  document.getElementById('reg-info').style.display='none';
+  finishLine=d.finishLine||50;
+});
+
+socket.on('horse:move',function(d){
+  finishLine=d.finishLine||50;
+  for(var i=1;i<=4;i++){
+    var pct=Math.min(100,Math.max(2,(d.progress[i]||0)/finishLine*100));
+    document.getElementById('fill-'+i).style.width=pct+'%';
+    document.getElementById('cnt-'+i).textContent=d.progress[i]||0;
+    if(pct>80)document.getElementById('fill-'+i).querySelector('.track-horse').style.transform='scale(1.2)';
+  }
+});
+
+socket.on('horse:finish',function(d){
+  document.getElementById('phase-label').textContent='🏆 انتهى السباق!';
+  document.getElementById('w-icon').textContent=ICONS[d.winner]||'🏆';
+  document.getElementById('w-text').textContent='الفريق '+NAMES[d.winner]+' فاز!';
+  document.getElementById('w-text').style.color=COLORS[d.winner];
+  document.getElementById('winner-overlay').classList.add('show');
+  fireConfetti();
+});
+
+socket.on('horse:stopped',function(){document.getElementById('box').classList.remove('show');});
+
+var CC=['#ef4444','#3b82f6','#22c55e','#fbbf24','#a855f7','#ec4899'];
+function fireConfetti(){var layer=document.getElementById('confetti'),box=document.getElementById('box'),cx=box.offsetWidth/2,cy=box.offsetHeight/2;for(var i=0;i<40;i++){var p=document.createElement('div');p.style.cssText='position:absolute;width:7px;height:11px;left:'+cx+'px;top:'+cy+'px;background:'+CC[i%CC.length]+';border-radius:2px;';layer.appendChild(p);var a=Math.random()*Math.PI*2,d=80+Math.random()*220;p.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px) rotate('+(600+Math.random()*600)+'deg)',opacity:0}],{duration:1400+Math.random()*500,easing:'cubic-bezier(0.4,0,0.6,1)'});setTimeout(function(el){el.remove()}.bind(null,p),2000);}}
+</script>
+</body>
+</html>

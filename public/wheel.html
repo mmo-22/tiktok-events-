@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎡 عجلة الحظ — فعاليات تيك توك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="/socket.io/socket.io.js"></script>
+<style>
+:root{
+  --bg:#06060b;--bg2:#0a0a14;--card:#0c0c16;--card2:#10101e;--card3:#161628;--border:#1c1c2e;
+  --accent:#0891b2;--accent2:#22d3ee;--gold:#f5c542;
+  --text:#e8eaf2;--muted:#8a8fa3;
+  --green:#22c55e;--red:#ef4444;--purple:#a855f7;--orange:#f97316;--blue:#3b82f6
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min-height:100vh;padding:18px 12px 60px}
+
+/* Common UI bits */
+.status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:900}
+.status-badge.live{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#86efac}
+.status-badge.pause{background:rgba(245,197,66,.13);border:1px solid rgba(245,197,66,.4);color:#fde68a}
+.status-badge.off{background:rgba(125,125,125,.1);border:1px solid #444;color:#999}
+.status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.status-badge.live .dot{animation:pulse 1.4s infinite}
+@keyframes pulse{50%{opacity:.4}}
+
+.btn{font-family:inherit;font-weight:900;border:none;border-radius:12px;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
+.btn:active{transform:scale(.95)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(8,145,178,.35)}
+.btn-success{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(34,197,94,.35)}
+.btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(239,68,68,.35)}
+.btn-warn{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;font-size:.88rem}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);padding:9px 16px;font-size:.82rem}
+.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2)}
+.btn-sm{padding:6px 12px;font-size:.75rem;border-radius:9px}
+
+.input,.select{background:var(--card3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:10px;font-family:inherit;font-size:.82rem;outline:none;transition:.2s;width:100%}
+.input:focus,.select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
+.field-label{display:block;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:5px}
+
+/* Top nav */
+.topnav{max-width:1280px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between}
+.topnav a{color:var(--accent2);text-decoration:none;font-weight:900;font-size:.8rem;border:1px solid var(--border);padding:7px 14px;border-radius:30px;background:var(--card);transition:.2s}
+.topnav a:hover{border-color:var(--accent2)}
+.topnav .who{font-size:.8rem;color:var(--muted);font-weight:900;direction:ltr}
+
+/* Split View */
+.split{display:grid;grid-template-columns:1fr 380px;gap:14px;max-width:1280px;margin:0 auto}
+
+.split-main{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px}
+.sm-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)}
+.sm-title{display:flex;align-items:center;gap:10px}
+.sm-icon{width:42px;height:42px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:1.3rem}
+.sm-title h2{font-size:1.05rem;font-weight:900}
+.sm-title p{font-size:.74rem;color:var(--muted)}
+
+.settings-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px;margin-bottom:18px}
+.setting{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px}
+.s-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.s-title{font-weight:900;font-size:.84rem;display:flex;align-items:center;gap:6px}
+.s-hint{font-size:.68rem;color:var(--muted)}
+
+/* Entries list (slot style) */
+.slot-list{display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto}
+.slot{display:flex;align-items:center;gap:8px;background:var(--card3);border:1px solid var(--border);border-radius:9px;padding:6px 10px;font-size:.78rem;animation:slideIn .2s}
+@keyframes slideIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1}}
+.slot .num{font-size:.62rem;color:var(--muted);width:20px;flex-shrink:0}
+.slot .sav{width:26px;height:26px;border-radius:50%;overflow:hidden;background:var(--card2);display:flex;align-items:center;justify-content:center;font-size:.68rem;font-weight:900;color:var(--muted);flex-shrink:0}
+.slot .sav img{width:100%;height:100%;object-fit:cover}
+.slot .snm{flex:1;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.slot .x{color:#ef4444;cursor:pointer;font-size:.85rem;opacity:.7;background:none;border:none;font-family:inherit}
+.slot .x:hover{opacity:1}
+.add-slot{background:transparent;border:1px dashed var(--border);color:var(--muted);padding:7px;border-radius:9px;font-family:inherit;font-size:.74rem;cursor:pointer;font-weight:700}
+.add-slot:hover{border-color:var(--accent2);color:var(--accent2)}
+.empty{text-align:center;color:var(--muted);padding:20px 8px;font-size:.76rem;line-height:1.8}
+
+/* Timer */
+.timer-display{font-size:2rem;font-weight:900;text-align:center;color:var(--accent2);letter-spacing:2px;padding:4px 0;display:none}
+.timer-display.warning{color:#f59e0b}
+.reg-status{text-align:center;font-size:.78rem;color:var(--muted);margin:8px 0 12px;line-height:1.6}
+
+/* Winner */
+.winner-card{background:linear-gradient(145deg,rgba(245,197,66,.12),rgba(245,197,66,.02));border:1px solid rgba(245,197,66,.35);border-radius:12px;padding:14px;display:none;text-align:center;margin-bottom:14px}
+.winner-card.show{display:block;animation:slideIn .3s}
+.winner-name{font-size:1.35rem;font-weight:900;color:var(--gold);margin:6px 0}
+.winner-actions{display:flex;gap:8px;margin-top:10px;justify-content:center}
+
+.action-bar{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;padding-top:14px;border-top:1px solid var(--border)}
+
+/* Preview side */
+.split-side{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:16px;height:fit-content;position:sticky;top:14px}
+.ss-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.ss-head h3{font-size:.9rem;font-weight:900}
+.preview-frame{aspect-ratio:16/9;background:radial-gradient(ellipse at center,#0c2440 0%,#06060b 70%);border-radius:12px;border:1px solid var(--border);position:relative;overflow:hidden;margin-bottom:14px}
+.preview-frame::before{content:"OBS PREVIEW";position:absolute;top:6px;right:8px;font-size:.55rem;color:rgba(255,255,255,.3);font-weight:900;letter-spacing:1px;z-index:2}
+.mini-wheel{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:65%;aspect-ratio:1;border-radius:50%;background:conic-gradient(from 0deg,#0891b2 0deg 60deg,#a855f7 60deg 120deg,#f5c542 120deg 180deg,#22c55e 180deg 240deg,#dc2626 240deg 300deg,#3b82f6 300deg 360deg);border:5px solid var(--gold);box-shadow:0 0 25px rgba(245,197,66,.4),0 0 0 6px #06060b;animation:spinSlow 18s linear infinite}
+.mini-wheel.spinning{animation:spinSlow 1.2s linear infinite}
+@keyframes spinSlow{to{transform:translate(-50%,-50%) rotate(360deg)}}
+.mini-wheel::after{content:"🎡";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:30%;height:30%;background:#06060b;border:2px solid var(--gold);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.2rem;animation:spinSlow 18s linear infinite reverse}
+
+.preview-meta{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.pm-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px}
+.pm-label{font-size:.66rem;color:var(--muted);font-weight:700}
+.pm-value{font-size:.85rem;font-weight:900;margin-top:1px}
+
+.obs-link{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:.7rem;color:var(--accent2);margin-top:10px;display:flex;align-items:center;gap:8px;font-family:monospace}
+.obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
+.obs-title{font-size:.68rem;color:var(--muted);font-weight:900;margin-top:12px}
+
+@media(max-width:1050px){
+  .split{grid-template-columns:1fr}
+  .split-side{position:static}
+}
+@media(max-width:600px){
+  .settings-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<div class="topnav">
+  <a href="/admin.html">← لوحة الأدمن</a>
+  <span class="who" id="status-text">غير متصل</span>
+</div>
+
+<div class="split">
+
+  <!-- التحكم -->
+  <div class="split-main">
+    <div class="sm-head">
+      <div class="sm-title">
+        <div class="sm-icon">🎡</div>
+        <div>
+          <h2>عجلة الحظ</h2>
+          <p>إعدادات وتشغيل الفعالية</p>
+        </div>
+      </div>
+      <span class="status-badge off" id="reg-badge"><span class="dot"></span> <span id="reg-badge-txt">التسجيل مغلق</span></span>
+    </div>
+
+    <div class="settings-grid">
+
+      <!-- إعدادات أساسية -->
+      <div class="setting" style="grid-column:span 2">
+        <div class="s-head">
+          <div class="s-title">⚙️ إعدادات أساسية</div>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+          <div>
+            <label class="field-label">كلمة التسجيل</label>
+            <input class="input" type="text" id="keyword-input" value="اشتراك" placeholder="اشتراك" onchange="saveKeyword()">
+          </div>
+          <div>
+            <label class="field-label">مدة التسجيل (ثواني — 0 بدون حد)</label>
+            <input class="input" type="number" id="reg-duration" value="0" min="0" max="600" step="10">
+          </div>
+          <div>
+            <label class="field-label">مدة الدوران (1 – 120 ثانية)</label>
+            <input class="input" type="number" id="spin-duration" value="5" min="1" max="120" step="1">
+          </div>
+        </div>
+      </div>
+
+      <!-- المشتركين -->
+      <div class="setting">
+        <div class="s-head">
+          <div class="s-title">👥 المشتركين</div>
+          <span class="s-hint"><b id="count" style="color:var(--accent2)">0</b> مشترك</span>
+        </div>
+        <div class="slot-list" id="entries-list">
+          <div class="empty">في انتظار المشتركين...<br><small>اطلب من الجمهور يكتبون "<span id="kw-hint">اشتراك</span>"</small></div>
+        </div>
+        <div style="display:flex;gap:6px;margin-top:8px">
+          <input class="input" type="text" id="manual-name" placeholder="أضف اسم يدوياً..." style="flex:1">
+          <button class="btn btn-ghost btn-sm" onclick="addManual()">+ أضف</button>
+        </div>
+        <button class="add-slot" style="margin-top:6px;width:100%;color:var(--red);border-color:rgba(239,68,68,.3)" onclick="clearEntries()">🗑 مسح الكل</button>
+      </div>
+
+      <!-- التسجيل -->
+      <div class="setting">
+        <div class="s-head">
+          <div class="s-title">📝 التسجيل</div>
+        </div>
+        <div class="timer-display" id="timer-display">00:00</div>
+        <div class="reg-status" id="reg-status">اضغط <b>ابدأ</b> ليبدأ استقبال الأسماء من الشات</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-success" id="reg-start-btn" onclick="startRegistration()" style="flex:1">▶ ابدأ التسجيل</button>
+          <button class="btn btn-danger" id="reg-stop-btn" onclick="stopRegistration()" style="flex:1" disabled>⏹ إيقاف</button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Winner -->
+    <div class="winner-card" id="winner-card">
+      <div style="font-size:.78rem;color:var(--muted)">🏆 الفائز</div>
+      <div class="winner-name" id="winner-name"></div>
+      <div class="winner-actions">
+        <button class="btn btn-success btn-sm" onclick="keepWinner()">✅ إبقاء في القائمة</button>
+        <button class="btn btn-ghost btn-sm" onclick="removeWinner()">🗑 حذف من القائمة</button>
+      </div>
+    </div>
+
+    <div class="action-bar">
+      <button class="btn btn-primary" id="spin-btn" style="flex:1;font-size:1rem;padding:13px" onclick="spinWheel()">🎡 دوّر العجلة</button>
+    </div>
+    <div style="font-size:.74rem;color:var(--muted);margin-top:8px;text-align:center" id="spin-status">أضف مشتركين ثم دوّر</div>
+  </div>
+
+  <!-- المعاينة -->
+  <div class="split-side">
+    <div class="ss-head">
+      <h3>👁️ معاينة الأوفرلي</h3>
+      <span class="status-badge off" id="conn-badge"><span class="dot"></span> <span id="conn-txt">Offline</span></span>
+    </div>
+    <div class="preview-frame">
+      <div class="mini-wheel" id="mini-wheel"></div>
+    </div>
+    <div class="preview-meta">
+      <div class="pm-item"><div class="pm-label">المشتركين</div><div class="pm-value" id="pm-count">0</div></div>
+      <div class="pm-item"><div class="pm-label">حالة التسجيل</div><div class="pm-value" id="pm-reg">مغلق</div></div>
+      <div class="pm-item"><div class="pm-label">كلمة التسجيل</div><div class="pm-value" id="pm-kw">اشتراك</div></div>
+      <div class="pm-item"><div class="pm-label">آخر فائز</div><div class="pm-value" id="pm-winner">—</div></div>
+    </div>
+    <div class="obs-title">🔗 رابط العجلة لـ OBS</div>
+    <div class="obs-link"><b id="overlay-link">...</b><button class="btn btn-sm btn-ghost" onclick="copyLink()">نسخ</button></div>
+    <div class="obs-title">🎴 رابط البطاقات (Slot) لـ OBS</div>
+    <div class="obs-link"><b id="slot-overlay-link">...</b><button class="btn btn-sm btn-ghost" onclick="copySlotLink()">نسخ</button></div>
+  </div>
+
+</div>
+
+<script>
+const params   = new URLSearchParams(location.search);
+const username = params.get('username') || params.get('user') || '';
+const socket   = io();
+
+let entries = [];
+let currentWinner = null;
+
+// Overlay links
+const overlayUrl = `${location.origin}/wheel-overlay.html?username=${username}`;
+document.getElementById('overlay-link').textContent = overlayUrl;
+const slotUrl = `${location.origin}/slot-overlay.html?username=${username}`;
+document.getElementById('slot-overlay-link').textContent = slotUrl;
+
+function copyLink() {
+  navigator.clipboard.writeText(overlayUrl);
+  flashCopy('overlay-link');
+}
+function copySlotLink() {
+  navigator.clipboard.writeText(slotUrl);
+  flashCopy('slot-overlay-link');
+}
+function flashCopy(id) {
+  const el = document.getElementById(id);
+  el.style.color = '#22c55e';
+  setTimeout(() => el.style.color = '', 1500);
+}
+
+// Connect
+if (username) {
+  socket.emit('join', { username });
+  document.getElementById('status-text').textContent = `@${username}`;
+  document.getElementById('conn-badge').className = 'status-badge live';
+  document.getElementById('conn-txt').textContent = 'Live';
+}
+
+socket.on('wheel:update', ({ entries: e, keyword, newEntry, fullSync }) => {
+  if (fullSync) {
+    entries = e || [];
+  } else if (newEntry) {
+    const exists = entries.find(x => x.userId === newEntry.userId);
+    if (!exists) entries.push(newEntry);
+  } else {
+    entries = e || [];
+  }
+  if (keyword) {
+    document.getElementById('keyword-input').value = keyword;
+    setKwHints(keyword);
+  }
+  renderEntries();
+});
+
+// Load existing
+if (username) {
+  fetch(`/api/wheel/${username}`).then(r => r.json()).then(data => {
+    entries = data.entries || [];
+    if (data.keyword) {
+      document.getElementById('keyword-input').value = data.keyword;
+      setKwHints(data.keyword);
+    }
+    setAccepting(data.accepting || false);
+    renderEntries();
+  });
+}
+
+function setKwHints(kw) {
+  const hint = document.getElementById('kw-hint');
+  if (hint) hint.textContent = kw;
+  document.getElementById('pm-kw').textContent = kw;
+}
+
+// ── Settings ──────────────────────────────────────────────
+function saveKeyword() {
+  const kw = document.getElementById('keyword-input').value.trim();
+  if (!kw || !username) return;
+  setKwHints(kw);
+  fetch('/api/wheel/config', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, keyword: kw }) });
+}
+
+// ── Registration ──────────────────────────────────────────
+let accepting = false;
+let regTimer = null;
+let regEndTime = 0;
+
+async function startRegistration() {
+  const duration = parseInt(document.getElementById('reg-duration').value) || 0;
+  await fetch('/api/wheel/start-registration', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, duration }),
+  });
+  setAccepting(true);
+  if (duration > 0) startTimer(duration);
+}
+
+async function stopRegistration() {
+  await fetch('/api/wheel/stop-registration', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username }),
+  });
+  setAccepting(false);
+  stopTimer();
+}
+
+function startTimer(seconds) {
+  regEndTime = Date.now() + seconds * 1000;
+  const disp = document.getElementById('timer-display');
+  disp.style.display = 'block';
+  disp.classList.remove('warning');
+  updateTimer();
+  if (regTimer) clearInterval(regTimer);
+  regTimer = setInterval(updateTimer, 100);
+}
+
+function updateTimer() {
+  const disp = document.getElementById('timer-display');
+  const remainMs = Math.max(0, regEndTime - Date.now());
+  const sec = Math.ceil(remainMs / 1000);
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  disp.textContent = `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if (sec <= 10 && sec > 0) disp.classList.add('warning');
+  if (remainMs <= 0) {
+    stopTimer();
+    stopRegistration();
+  }
+}
+
+function stopTimer() {
+  if (regTimer) clearInterval(regTimer);
+  regTimer = null;
+  document.getElementById('timer-display').style.display = 'none';
+}
+
+function setAccepting(on) {
+  accepting = on;
+  const statusEl = document.getElementById('reg-status');
+  const startBtn = document.getElementById('reg-start-btn');
+  const stopBtn  = document.getElementById('reg-stop-btn');
+  const badge    = document.getElementById('reg-badge');
+  const badgeTxt = document.getElementById('reg-badge-txt');
+  if (on) {
+    statusEl.innerHTML = '🟢 التسجيل مفتوح — الأسماء تُضاف تلقائياً من الشات';
+    statusEl.style.color = '#86efac';
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    badge.className = 'status-badge live';
+    badgeTxt.textContent = 'التسجيل مفتوح';
+    document.getElementById('pm-reg').textContent = 'مفتوح 🟢';
+  } else {
+    statusEl.innerHTML = 'اضغط <b>ابدأ</b> ليبدأ استقبال الأسماء من الشات';
+    statusEl.style.color = 'var(--muted)';
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    badge.className = 'status-badge off';
+    badgeTxt.textContent = 'التسجيل مغلق';
+    document.getElementById('pm-reg').textContent = 'مغلق';
+  }
+}
+
+socket.on('wheel:registration', ({ accepting: a }) => {
+  setAccepting(a);
+  if (!a) stopTimer();
+});
+
+// ── Spin ──────────────────────────────────────────────────
+async function spinWheel() {
+  if (entries.length < 2) return;
+  document.getElementById('spin-btn').disabled = true;
+  document.getElementById('spin-status').textContent = '🎲 جاري الدوران...';
+  document.getElementById('winner-card').classList.remove('show');
+  document.getElementById('mini-wheel').classList.add('spinning');
+
+  const duration = Math.max(1, Math.min(120, parseInt(document.getElementById('spin-duration').value) || 5));
+
+  const res = await fetch('/api/wheel/spin', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, duration, speed: 'normal' }),
+  });
+  const data = await res.json();
+
+  if (data.ok) {
+    currentWinner = data.winner;
+    setTimeout(() => {
+      document.getElementById('winner-name').textContent = data.winner.name;
+      document.getElementById('winner-card').classList.add('show');
+      document.getElementById('spin-status').textContent = `🏆 الفائز: ${data.winner.name}`;
+      document.getElementById('pm-winner').textContent = data.winner.name;
+      document.getElementById('spin-btn').disabled = false;
+      document.getElementById('mini-wheel').classList.remove('spinning');
+    }, duration * 1000);
+  } else {
+    document.getElementById('spin-btn').disabled = false;
+    document.getElementById('mini-wheel').classList.remove('spinning');
+    document.getElementById('spin-status').textContent = data.message || 'خطأ';
+  }
+}
+
+function keepWinner() {
+  document.getElementById('winner-card').classList.remove('show');
+  currentWinner = null;
+}
+
+async function removeWinner() {
+  if (!currentWinner) return;
+  entries = entries.filter(e => e.userId !== currentWinner.userId);
+  await fetch('/api/wheel/remove-winner', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username, userId: currentWinner.userId }) });
+  document.getElementById('winner-card').classList.remove('show');
+  currentWinner = null;
+  renderEntries();
+}
+
+async function addManual() {
+  const input = document.getElementById('manual-name');
+  const name = input.value.trim();
+  if (!name || !username) return;
+  input.value = '';
+  await fetch('/api/wheel/add', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, name }),
+  });
+}
+
+async function removeEntry(userId) {
+  entries = entries.filter(e => e.userId !== userId);
+  renderEntries();
+  await fetch('/api/wheel/remove', {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, userId }),
+  });
+}
+
+async function clearEntries() {
+  if (!confirm('مسح كل المشتركين؟')) return;
+  await fetch('/api/wheel/clear', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
+  entries = [];
+  renderEntries();
+}
+
+// ── Render ────────────────────────────────────────────────
+function renderEntries() {
+  const list = document.getElementById('entries-list');
+  document.getElementById('count').textContent = entries.length;
+  document.getElementById('pm-count').textContent = entries.length;
+  document.getElementById('spin-btn').disabled = entries.length < 2;
+  document.getElementById('spin-status').textContent = entries.length < 2 ? 'أضف مشتركين ثم دوّر' : `${entries.length} مشترك — جاهز للدوران 🎡`;
+
+  if (!entries.length) {
+    const kw = document.getElementById('keyword-input').value || 'اشتراك';
+    list.innerHTML = `<div class="empty">في انتظار المشتركين...<br><small>اطلب من الجمهور يكتبون "<b id="kw-hint">${escHtml(kw)}</b>"</small></div>`;
+    return;
+  }
+
+  const display = entries.slice(-50).reverse();
+  list.innerHTML = display.map((e,i) => `
+    <div class="slot">
+      <span class="num">${entries.length - i}.</span>
+      <div class="sav">${e.avatar ? `<img src="${e.avatar}" onerror="this.parentElement.textContent='${escHtml((e.name||'?')[0])}'">` : escHtml((e.name||'?')[0])}</div>
+      <span class="snm">${escHtml(e.name)}</span>
+      <button class="x" onclick="removeEntry('${e.userId}')">✕</button>
+    </div>`).join('');
+}
+
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/'/g,'&#39;').replace(/"/g,'&quot;');
+}
+
+document.getElementById('manual-name').addEventListener('keydown', e => { if (e.key === 'Enter') addManual(); });
+</script>
+</body>
+</html>

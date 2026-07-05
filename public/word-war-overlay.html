@@ -2,118 +2,108 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<title>Word War Overlay</title>
+<title>⚔️ حرب الكلمات</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body.mobile{transform:scale(0.55);transform-origin:center center}
-html,body{background:transparent;width:100vw;height:100vh;font-family:'Tajawal',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center}
-:root{--scale:1}
-.main-box{position:relative;background:rgba(0,0,0,.92);border:2px solid rgba(255,255,255,.12);border-radius:22px;padding:calc(20px * var(--scale)) calc(24px * var(--scale));width:calc(700px * var(--scale));height:calc(460px * var(--scale));opacity:0;pointer-events:none;transition:opacity .15s;overflow:hidden}
-.main-box.show{opacity:1}
+html,body{background:transparent !important;width:100vw;height:100vh;font-family:'Tajawal',sans-serif;overflow:hidden;display:flex;align-items:center;justify-content:center}
 
-.game-title{font-size:calc(18px * var(--scale));color:rgba(255,255,255,.5);text-align:center;margin-bottom:calc(6px * var(--scale))}
-.game-title span{font-weight:900}
-.game-title .red{color:#ef4444}
-.game-title .blue{color:#3b82f6}
+.main{position:relative;width:min(96vw,700px);aspect-ratio:16/10.5;opacity:0;pointer-events:none;transition:opacity .2s}
+.main.show{opacity:1}
+.scene{position:absolute;inset:0;border-radius:18px;overflow:hidden;border:2px solid rgba(245,197,66,.3);
+  background:radial-gradient(ellipse at 20% 30%,#1e0a0a 0%,#06060b 55%),radial-gradient(ellipse at 80% 70%,#0a1430 0%,transparent 55%);
+  box-shadow:0 0 30px rgba(0,0,0,.6)}
+.scene.shake{animation:shk .35s}
+@keyframes shk{0%,100%{transform:translate(0)}25%{transform:translate(-5px,3px)}50%{transform:translate(5px,-3px)}75%{transform:translate(-3px,-2px)}}
 
-.category-bar{text-align:center;font-size:calc(22px * var(--scale));font-weight:900;color:#fbbf24;margin-bottom:calc(14px * var(--scale));padding:calc(8px * var(--scale));background:rgba(251,191,36,.08);border-radius:10px;border:1px solid rgba(251,191,36,.2)}
-
-.scoreboard{display:flex;align-items:center;justify-content:center;gap:calc(16px * var(--scale));margin-bottom:calc(14px * var(--scale))}
-.team-score{flex:1;text-align:center;padding:calc(12px * var(--scale));border-radius:14px;position:relative;overflow:hidden}
-.team-score.red{background:rgba(239,68,68,.12);border:2px solid rgba(239,68,68,.4)}
-.team-score.blue{background:rgba(59,130,246,.12);border:2px solid rgba(59,130,246,.4)}
-.team-label{font-size:calc(13px * var(--scale));font-weight:700;margin-bottom:calc(4px * var(--scale))}
-.team-score.red .team-label{color:#ef4444}
-.team-score.blue .team-label{color:#3b82f6}
-.team-num{font-size:calc(42px * var(--scale));font-weight:900;color:#fff;line-height:1}
-.score-vs{font-size:calc(18px * var(--scale));font-weight:900;color:rgba(255,255,255,.3)}
-.score-bar-wrap{height:calc(8px * var(--scale));background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden;display:flex;margin-bottom:calc(14px * var(--scale))}
-.score-bar-red{height:100%;background:linear-gradient(90deg,#ef4444,#f87171);transition:width .5s ease;border-radius:99px 0 0 99px;min-width:2px}
-.score-bar-blue{height:100%;background:linear-gradient(90deg,#60a5fa,#3b82f6);transition:width .5s ease;border-radius:0 99px 99px 0;min-width:2px}
-
-.words-area{display:flex;gap:calc(10px * var(--scale));margin-bottom:calc(10px * var(--scale));height:calc(130px * var(--scale))}
-.words-col{flex:1;border-radius:12px;padding:calc(8px * var(--scale));height:100%;overflow:hidden}
-.words-col.red{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15)}
-.words-col.blue{background:rgba(59,130,246,.06);border:1px solid rgba(59,130,246,.15)}
-.words-col.reg-mode{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:2px;padding:calc(6px * var(--scale))}
-.word-chip{display:inline-flex;align-items:center;gap:calc(4px * var(--scale));padding:calc(3px * var(--scale)) calc(10px * var(--scale)) calc(3px * var(--scale)) calc(3px * var(--scale));margin:calc(2px * var(--scale));border-radius:20px;font-size:calc(12px * var(--scale));font-weight:700;animation:chipPop .3s cubic-bezier(0.34,1.56,0.64,1)}
-.word-chip .avatar{width:calc(20px * var(--scale));height:calc(20px * var(--scale));border-radius:50%;object-fit:cover;flex-shrink:0}
-.words-col.red .word-chip{background:rgba(239,68,68,.15);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
-.words-col.blue .word-chip{background:rgba(59,130,246,.15);color:#93c5fd;border:1px solid rgba(59,130,246,.25)}
-@keyframes chipPop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
-@keyframes joinPop{0%{transform:translateX(-50%) translateY(-20px) scale(.8);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
+/* الجانبين */
+.ww-side{position:absolute;top:34px;bottom:44px;width:50%;display:flex;flex-direction:column;align-items:center;padding-top:6px}
+.ww-r{right:0}.ww-l{left:0}
+.ww-title{font-weight:900;font-size:.88rem;padding:4px 16px;border-radius:20px;margin-bottom:5px;white-space:nowrap;z-index:4}
+.ww-r .ww-title{background:rgba(239,68,68,.18);color:#fca5a5;border:1px solid #7f1d1d}
+.ww-l .ww-title{background:rgba(59,130,246,.18);color:#93c5fd;border:1px solid #1e3a8a}
+.ww-score{font-size:1.9rem;font-weight:900;color:#fff;line-height:1;margin-bottom:4px;z-index:4;text-shadow:0 2px 8px rgba(0,0,0,.7)}
+.hp{width:76%;height:13px;background:#111122;border-radius:10px;overflow:hidden;border:1px solid #222;z-index:4}
+.hp i{display:block;height:100%;transition:width .5s;width:100%}
+.ww-r .hp i{background:linear-gradient(90deg,#ef4444,#f97316)}
+.ww-l .hp i{background:linear-gradient(90deg,#3b82f6,#22d3ee)}
+.ww-words{flex:1;width:100%;position:relative}
+.ww-words.reg-mode{display:flex;flex-wrap:wrap;align-content:center;justify-content:center;gap:4px;padding:10px}
+.w-card{position:absolute;background:#0c0c16ee;border:1px solid;border-radius:10px;padding:5px 12px;font-weight:900;font-size:.82rem;opacity:0;white-space:nowrap;display:flex;align-items:center;gap:5px;max-width:90%}
+.w-card img{width:18px;height:18px;border-radius:50%;object-fit:cover}
+.ww-r .w-card{border-color:#ef4444;color:#fca5a5}
+.ww-l .w-card{border-color:#3b82f6;color:#93c5fd}
+@keyframes pop{0%{opacity:0;transform:scale(.4)}20%{opacity:1;transform:scale(1.12)}30%{transform:scale(1)}80%{opacity:1}100%{opacity:0;transform:translateY(-18px)}}
+.reg-av{width:30px;height:30px;border-radius:50%;overflow:hidden;border:2px solid;animation:regPop .3s ease;flex-shrink:0;display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.08);font-size:.6rem;color:rgba(255,255,255,.5)}
+.ww-r .reg-av{border-color:#ef4444}
+.ww-l .reg-av{border-color:#3b82f6}
+.reg-av img{width:100%;height:100%;object-fit:cover}
 @keyframes regPop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
 
-.timer-row{display:flex;align-items:center;gap:calc(12px * var(--scale));padding:0 calc(4px * var(--scale))}
-.timer-bar{flex:1;height:calc(8px * var(--scale));background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
+/* الوسط */
+.ww-vs{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:2rem;font-weight:900;color:#f5c542;text-shadow:0 0 24px rgba(245,197,66,.7);z-index:5}
+.bolt{position:absolute;top:12%;bottom:12%;left:50%;width:3px;background:linear-gradient(#f5c542,transparent 30%,#f5c542 50%,transparent 70%,#f5c542);transform:translateX(-50%);opacity:.5;z-index:3}
+
+/* HUD أعلى */
+.category-bar{position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:8;text-align:center;font-size:.9rem;font-weight:900;color:#fbbf24;background:#0c0c16dd;border:1px solid rgba(251,191,36,.35);border-radius:12px;padding:4px 18px;white-space:nowrap;max-width:80%;overflow:hidden;text-overflow:ellipsis}
+.join-kw{position:absolute;top:36px;left:50%;transform:translateX(-50%);z-index:8;font-size:.7rem;font-weight:900;background:#0c0c16cc;border-radius:10px;padding:3px 12px;display:none;white-space:nowrap;color:rgba(255,255,255,.7)}
+
+/* أسفل: المؤقت */
+.timer-row{position:absolute;bottom:8px;left:14px;right:14px;display:none;align-items:center;gap:10px;z-index:8}
+.timer-bar{flex:1;height:8px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;border:1px solid rgba(0,0,0,.4)}
 .timer-fill{height:100%;background:#fbbf24;border-radius:99px;transition:width .3s linear}
 .timer-fill.warn{background:#f59e0b}
-.timer-fill.danger{background:#ff0050}
-.timer-num{font-size:calc(22px * var(--scale));font-weight:900;color:#fff;font-variant-numeric:tabular-nums;min-width:calc(40px * var(--scale));text-align:center}
+.timer-fill.danger{background:#ef4444}
+.timer-num{font-size:1.1rem;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;min-width:36px;text-align:center;text-shadow:0 2px 6px #000}
 
-.result-banner{display:none;text-align:center;padding:calc(24px * var(--scale));border-radius:14px;position:absolute;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+/* النتيجة */
+.result-banner{display:none;text-align:center;position:absolute;inset:0;z-index:10;flex-direction:column;align-items:center;justify-content:center;backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
 .result-banner.show{display:flex;animation:chipPop .5s cubic-bezier(0.34,1.56,0.64,1)}
-.result-banner.red-win{background:rgba(239,68,68,.25);border:2px solid rgba(239,68,68,.5)}
-.result-banner.blue-win{background:rgba(59,130,246,.25);border:2px solid rgba(59,130,246,.5)}
-.result-banner.tie{background:rgba(251,191,36,.25);border:2px solid rgba(251,191,36,.5)}
-.result-text{font-size:calc(32px * var(--scale));font-weight:900;color:#fff}
-.result-sub{font-size:calc(16px * var(--scale));color:rgba(255,255,255,.6);margin-top:calc(8px * var(--scale))}
+.result-banner.red-win{background:rgba(239,68,68,.28)}
+.result-banner.blue-win{background:rgba(59,130,246,.28)}
+.result-banner.tie{background:rgba(251,191,36,.25)}
+.result-text{font-size:1.8rem;font-weight:900;color:#fff;text-shadow:0 2px 10px rgba(0,0,0,.6)}
+.result-sub{font-size:1rem;color:rgba(255,255,255,.75);margin-top:8px;font-weight:900}
+@keyframes chipPop{0%{transform:scale(0);opacity:0}100%{transform:scale(1);opacity:1}}
+@keyframes joinPop{0%{transform:translateX(-50%) translateY(-20px) scale(.8);opacity:0}100%{transform:translateX(-50%) translateY(0) scale(1);opacity:1}}
 
-.feed{position:absolute;bottom:calc(8px * var(--scale));left:calc(12px * var(--scale));right:calc(12px * var(--scale));display:flex;flex-direction:column;gap:calc(3px * var(--scale))}
-.feed-item{font-size:calc(11px * var(--scale));padding:calc(3px * var(--scale)) calc(8px * var(--scale));border-radius:6px;animation:chipPop .3s ease;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.feed-item.red{background:rgba(239,68,68,.1);color:#fca5a5}
-.feed-item.blue{background:rgba(59,130,246,.1);color:#93c5fd}
-
-.confetti-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti-layer{position:absolute;inset:0;pointer-events:none;overflow:hidden;z-index:11}
 </style>
 </head>
 <body>
-<div class="main-box" id="box">
-  <div class="game-title">⚔️ <span class="red">حرب</span> <span class="blue">الكلمات</span></div>
-  <div class="category-bar" id="category">—</div>
-  <div id="join-keywords" style="display:none;text-align:center;font-size:calc(13px * var(--scale));margin-bottom:calc(6px * var(--scale));color:rgba(255,255,255,.6);font-weight:500"></div>
-  <div id="reg-avatars" style="display:none;margin-bottom:calc(8px * var(--scale))">
-    <div style="display:flex;gap:calc(6px * var(--scale));align-items:center">
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-size:calc(10px * var(--scale));color:#ef4444;font-weight:700">🔴 الأحمر</div>
-        <div id="red-reg-avatars" style="display:flex;flex-wrap:nowrap;gap:3px;justify-content:center;overflow:hidden;max-height:28px"></div>
-      </div>
-      <div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">
-        <div style="font-size:calc(10px * var(--scale));color:#3b82f6;font-weight:700">🔵 الأزرق</div>
-        <div id="blue-reg-avatars" style="display:flex;flex-wrap:nowrap;gap:3px;justify-content:center;overflow:hidden;max-height:28px"></div>
-      </div>
+<div class="main" id="box">
+  <div class="scene" id="scene">
+    <div class="bolt"></div>
+    <div class="ww-vs">VS</div>
+    <div class="category-bar" id="category">—</div>
+    <div class="join-kw" id="join-keywords"></div>
+
+    <div class="ww-side ww-r">
+      <div class="ww-title" id="red-label">🔴 الأحمر</div>
+      <div class="ww-score" id="red-score">0</div>
+      <div class="hp"><i id="hp-r"></i></div>
+      <div class="ww-words" id="red-words"></div>
     </div>
-  </div>
-  <div class="scoreboard">
-    <div class="team-score red">
-      <div class="team-label">🔴 الفريق الأحمر</div>
-      <div class="team-num" id="red-score">0</div>
+    <div class="ww-side ww-l">
+      <div class="ww-title" id="blue-label">🔵 الأزرق</div>
+      <div class="ww-score" id="blue-score">0</div>
+      <div class="hp"><i id="hp-l"></i></div>
+      <div class="ww-words" id="blue-words"></div>
     </div>
-    <div class="score-vs">VS</div>
-    <div class="team-score blue">
-      <div class="team-label">🔵 الفريق الأزرق</div>
-      <div class="team-num" id="blue-score">0</div>
+
+    <div class="timer-row" id="timer-row">
+      <div class="timer-num" id="timer-num">60</div>
+      <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
     </div>
+
+    <div class="result-banner" id="result-banner">
+      <div class="result-text" id="result-text"></div>
+      <div class="result-sub" id="result-sub"></div>
+    </div>
+    <div class="confetti-layer" id="confetti-layer"></div>
   </div>
-  <div class="score-bar-wrap">
-    <div class="score-bar-red" id="bar-red" style="width:50%"></div>
-    <div class="score-bar-blue" id="bar-blue" style="width:50%"></div>
-  </div>
-  <div class="words-area">
-    <div class="words-col red" id="red-words"></div>
-    <div class="words-col blue" id="blue-words"></div>
-  </div>
-  <div class="timer-row" id="timer-row" style="display:none">
-    <div class="timer-num" id="timer-num">60</div>
-    <div class="timer-bar"><div class="timer-fill" id="timer-fill" style="width:100%"></div></div>
-  </div>
-  <div class="result-banner" id="result-banner">
-    <div class="result-text" id="result-text"></div>
-    <div class="result-sub" id="result-sub"></div>
-  </div>
-  <div class="confetti-layer" id="confetti-layer"></div>
 </div>
 
 <script>
@@ -125,18 +115,35 @@ let timerInt = null, endTime = 0, totalDuration = 60;
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 
-function applyColors(red, blue) {
-  var redEl = document.querySelector('.team-score.red');
-  var blueEl = document.querySelector('.team-score.blue');
-  if (redEl) { redEl.style.background = red + '1f'; redEl.style.borderColor = red + '66'; redEl.querySelector('.team-label').style.color = red; }
-  if (blueEl) { blueEl.style.background = blue + '1f'; blueEl.style.borderColor = blue + '66'; blueEl.querySelector('.team-label').style.color = blue; }
-  document.getElementById('bar-red').style.background = 'linear-gradient(90deg,' + red + ',' + red + 'cc)';
-  document.getElementById('bar-blue').style.background = 'linear-gradient(90deg,' + blue + 'cc,' + blue + ')';
-  var redCol = document.querySelector('.words-col.red');
-  var blueCol = document.querySelector('.words-col.blue');
-  if (redCol) { redCol.style.background = red + '0f'; redCol.style.borderColor = red + '26'; }
-  if (blueCol) { blueCol.style.background = blue + '0f'; blueCol.style.borderColor = blue + '26'; }
-  window._redColor = red; window._blueColor = blue;
+/* HP يمثل فارق النقاط: المتأخر ينزف */
+function updateScores(r, b) {
+  r = r || 0; b = b || 0;
+  document.getElementById('red-score').textContent = r;
+  document.getElementById('blue-score').textContent = b;
+  var redHP  = Math.max(8, 100 - Math.max(0, b - r) * 5);
+  var blueHP = Math.max(8, 100 - Math.max(0, r - b) * 5);
+  document.getElementById('hp-r').style.width = redHP + '%';
+  document.getElementById('hp-l').style.width = blueHP + '%';
+}
+
+function shakeScene(){
+  var sc=document.getElementById('scene');
+  sc.classList.remove('shake');void sc.offsetWidth;sc.classList.add('shake');
+  setTimeout(function(){sc.classList.remove('shake');},380);
+}
+
+/* بطاقة كلمة تنبثق بموقع عشوائي بجهة الفريق */
+function spawnWordCard(team, word, avatar){
+  var box = document.getElementById(team + '-words');
+  if (box.classList.contains('reg-mode')) return;
+  var c = document.createElement('div');
+  c.className = 'w-card';
+  c.innerHTML = (avatar ? '<img src="'+esc(avatar)+'" onerror="this.remove()">' : '💥 ') + esc(word);
+  c.style.right = (8 + Math.random()*45) + '%';
+  c.style.top = (8 + Math.random()*68) + '%';
+  c.style.animation = 'pop 1.4s forwards';
+  box.appendChild(c);
+  setTimeout(function(){ c.remove(); }, 1400);
 }
 
 function joinRoom() {
@@ -146,26 +153,21 @@ function joinRoom() {
     if (d.active) {
       document.getElementById('category').textContent = d.category;
       updateScores(d.redScore, d.blueScore);
-      renderWords('red', d.redWords || []);
-      renderWords('blue', d.blueWords || []);
+      (d.redWords||[]).slice(-3).forEach(w => spawnWordCard('red', w));
+      (d.blueWords||[]).slice(-3).forEach(w => spawnWordCard('blue', w));
       const remMs = Math.max(0, d.endTime - Date.now());
       document.getElementById('timer-row').style.display = 'flex';
       startTimer(Math.ceil(remMs/1000), d.duration);
       document.getElementById('box').classList.add('show');
     }
-    // Show during registration too
     if (d.registrationOpen) {
       const kw = document.getElementById('join-keywords');
-      if (kw) {
-        kw.innerHTML = '📝 سجل الآن! — <span style="color:#fca5a5">🔴 اكتب "' + esc(d.redKeyword||'أحمر') + '"</span> أو <span style="color:#93c5fd">🔵 اكتب "' + esc(d.blueKeyword||'أزرق') + '"</span>';
-        kw.style.display = 'block';
-        kw.style.color = '#1dba72';
-        kw.style.fontSize = 'calc(15px * var(--scale))';
-      }
+      kw.innerHTML = '📝 سجل الآن! — <span style="color:#fca5a5">🔴 اكتب "' + esc(d.redKeyword||'أحمر') + '"</span> أو <span style="color:#93c5fd">🔵 اكتب "' + esc(d.blueKeyword||'أزرق') + '"</span>';
+      kw.style.display = 'block';
       document.getElementById('category').textContent = '📝 مرحلة التسجيل';
       document.getElementById('timer-row').style.display = 'none';
-      var ra = document.getElementById('reg-avatars');
-      if (ra) ra.style.display = 'block';
+      document.getElementById('red-words').classList.add('reg-mode');
+      document.getElementById('blue-words').classList.add('reg-mode');
       updateScores(d.redScore || 0, d.blueScore || 0);
       document.getElementById('box').classList.add('show');
     }
@@ -177,23 +179,15 @@ joinRoom();
 socket.on('word-war:start', ({ category, duration, redKeyword, blueKeyword, redScore, blueScore }) => {
   playerWordCounts = {};
   document.getElementById('category').textContent = category;
-  // Hide registration elements
-  var ra = document.getElementById('reg-avatars');
-  if (ra) ra.style.display = 'none';
   document.getElementById('red-words').classList.remove('reg-mode');
   document.getElementById('blue-words').classList.remove('reg-mode');
-  document.getElementById('red-score').textContent = redScore || '0';
-  document.getElementById('blue-score').textContent = blueScore || '0';
   document.getElementById('red-words').innerHTML = '';
   document.getElementById('blue-words').innerHTML = '';
   document.getElementById('result-banner').classList.remove('show','red-win','blue-win','tie');
   updateScores(redScore || 0, blueScore || 0);
-  // Show join keywords
   const kw = document.getElementById('join-keywords');
-  if (kw) {
-    kw.innerHTML = '<span style="color:#fca5a5">🔴 اكتب "' + esc(redKeyword||'أحمر') + '"</span> — <span style="color:#93c5fd">🔵 اكتب "' + esc(blueKeyword||'أزرق') + '"</span>';
-    kw.style.display = 'block';
-  }
+  kw.innerHTML = '<span style="color:#fca5a5">🔴 اكتب "' + esc(redKeyword||'أحمر') + '"</span> — <span style="color:#93c5fd">🔵 اكتب "' + esc(blueKeyword||'أزرق') + '"</span>';
+  kw.style.display = 'block';
   totalDuration = duration;
   document.getElementById('timer-row').style.display = 'flex';
   startTimer(duration, duration);
@@ -205,34 +199,23 @@ var playerWordCounts = {};
 socket.on('word-war:word', ({ team, word, player, avatar, redScore, blueScore, totalWords }) => {
   updateScores(redScore, blueScore);
   playerWordCounts[player] = totalWords || ((playerWordCounts[player] || 0) + 1);
-  const col = document.getElementById(team + '-words');
-  const chip = document.createElement('span');
-  chip.className = 'word-chip';
-  if (avatar) {
-    chip.innerHTML = '<img class="avatar" src="' + esc(avatar) + '" alt="">' + esc(word);
-  } else {
-    chip.innerHTML = esc(word);
-  }
-  col.prepend(chip);
-  while (col.children.length > 5) col.removeChild(col.lastChild);
+  spawnWordCard(team, word, avatar);
+  shakeScene();
 });
 
 var regVisibleCount = 10;
 
 socket.on('word-war:join', ({ team, player, avatar, redCount, blueCount }) => {
-  document.querySelector('.team-score.red .team-label').textContent = '🔴 الأحمر (' + redCount + ')';
-  document.querySelector('.team-score.blue .team-label').textContent = '🔵 الأزرق (' + blueCount + ')';
+  document.getElementById('red-label').textContent = '🔴 الأحمر (' + redCount + ')';
+  document.getElementById('blue-label').textContent = '🔵 الأزرق (' + blueCount + ')';
   showJoinConfirm(team, player);
-  // Add avatar to words column during registration
   var col = document.getElementById(team + '-words');
   if (col && col.classList.contains('reg-mode')) {
-    var borderColor = team === 'red' ? '#ef4444' : '#3b82f6';
     var div = document.createElement('div');
-    div.style.cssText = 'width:28px;height:28px;border-radius:50%;border:2px solid '+borderColor+';overflow:hidden;flex-shrink:0;animation:regPop .3s ease;display:inline-block;margin:2px';
+    div.className = 'reg-av';
     if (avatar) {
-      div.innerHTML = '<img src="'+avatar+'" style="width:100%;height:100%;object-fit:cover" onerror="this.parentElement.textContent=\'?\'">';
+      div.innerHTML = '<img src="'+esc(avatar)+'" onerror="this.parentElement.textContent=\'?\'">';
     } else {
-      div.style.cssText += ';display:inline-flex;align-items:center;justify-content:center;background:rgba(255,255,255,.1);font-size:10px;color:rgba(255,255,255,.4)';
       div.textContent = '?';
     }
     col.appendChild(div);
@@ -240,7 +223,6 @@ socket.on('word-war:join', ({ team, player, avatar, redCount, blueCount }) => {
   }
 });
 
-// Listen for visible count changes
 socket.on('word-war:reg-visible', function(d) {
   regVisibleCount = d.count || 10;
 });
@@ -260,32 +242,25 @@ function showJoinConfirm(team, name) {
 
 socket.on('word-war:registration', ({ open, redKeyword, blueKeyword }) => {
   const kw = document.getElementById('join-keywords');
-  const ra = document.getElementById('reg-avatars');
-  if (open && kw) {
+  if (open) {
     stopTimer();
     document.getElementById('timer-row').style.display = 'none';
     document.getElementById('result-banner').classList.remove('show','red-win','blue-win','tie');
     kw.innerHTML = '📝 سجل الآن! — <span style="color:#fca5a5">🔴 اكتب "' + esc(redKeyword) + '"</span> أو <span style="color:#93c5fd">🔵 اكتب "' + esc(blueKeyword) + '"</span>';
     kw.style.display = 'block';
-    kw.style.color = '#1dba72';
-    kw.style.fontSize = 'calc(15px * var(--scale))';
     document.getElementById('category').textContent = '📝 مرحلة التسجيل';
     document.getElementById('box').classList.add('show');
-    // Use words area for registration avatars
     document.getElementById('red-words').innerHTML = '';
     document.getElementById('blue-words').innerHTML = '';
     document.getElementById('red-words').classList.add('reg-mode');
     document.getElementById('blue-words').classList.add('reg-mode');
-    if (ra) ra.style.display = 'none';
   }
 });
 
 socket.on('word-war:lock', ({ locked }) => {
   const kw = document.getElementById('join-keywords');
-  if (kw) {
-    if (locked) { kw.innerHTML = '🔒 التسجيل مقفل'; kw.style.color = '#ef4444'; }
-    else { kw.style.color = 'rgba(255,255,255,.6)'; }
-  }
+  if (locked) { kw.innerHTML = '🔒 التسجيل مقفل'; kw.style.color = '#fca5a5'; }
+  else { kw.style.color = 'rgba(255,255,255,.7)'; }
   stopTimer();
   document.getElementById('timer-row').style.display = 'none';
 });
@@ -293,18 +268,14 @@ socket.on('word-war:lock', ({ locked }) => {
 socket.on('word-war:teams-cleared', () => {
   stopTimer();
   document.getElementById('timer-row').style.display = 'none';
-  document.getElementById('red-score').textContent = '0';
-  document.getElementById('blue-score').textContent = '0';
   updateScores(0, 0);
   document.getElementById('red-words').innerHTML = '';
   document.getElementById('blue-words').innerHTML = '';
   document.getElementById('red-words').classList.remove('reg-mode');
   document.getElementById('blue-words').classList.remove('reg-mode');
   document.getElementById('result-banner').classList.remove('show','red-win','blue-win','tie');
-  document.querySelector('.team-score.red .team-label').textContent = '🔴 الأحمر (0)';
-  document.querySelector('.team-score.blue .team-label').textContent = '🔵 الأزرق (0)';
-  document.getElementById('red-reg-avatars').innerHTML = '';
-  document.getElementById('blue-reg-avatars').innerHTML = '';
+  document.getElementById('red-label').textContent = '🔴 الأحمر (0)';
+  document.getElementById('blue-label').textContent = '🔵 الأزرق (0)';
   playerWordCounts = {};
 });
 
@@ -317,9 +288,11 @@ socket.on('word-war:end', (result) => {
   if (result.winner === 'red') {
     banner.classList.add('red-win');
     text.textContent = '🔴 الفريق الأحمر يفوز!';
+    document.getElementById('hp-l').style.width = '0%';
   } else if (result.winner === 'blue') {
     banner.classList.add('blue-win');
     text.textContent = '🔵 الفريق الأزرق يفوز!';
+    document.getElementById('hp-r').style.width = '0%';
   } else {
     banner.classList.add('tie');
     text.textContent = '🤝 تعادل!';
@@ -333,19 +306,6 @@ socket.on('word-war:stopped', () => {
   stopTimer();
   document.getElementById('box').classList.remove('show');
 });
-
-function updateScores(r, b) {
-  document.getElementById('red-score').textContent = r;
-  document.getElementById('blue-score').textContent = b;
-  const total = Math.max(1, r + b);
-  document.getElementById('bar-red').style.width = (r / total * 100) + '%';
-  document.getElementById('bar-blue').style.width = (b / total * 100) + '%';
-}
-
-function renderWords(team, words) {
-  const col = document.getElementById(team + '-words');
-  col.innerHTML = words.slice(-20).map(w => `<span class="word-chip">${esc(w)}</span>`).join('');
-}
 
 function startTimer(remaining, duration) {
   endTime = Date.now() + remaining * 1000;

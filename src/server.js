@@ -2067,13 +2067,33 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v1';
+const VERSION = 'v1.1';
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);
 });
 
 // Version API
+// ── شروط اللعب (بطاقات كوميك تظهر بالأوفرلي قبل بدء الفعالية) ──
+app.post('/api/rules/show', (req, res) => {
+  const { username, game, title, rules, duration } = req.body;
+  const key = username?.toLowerCase().replace('@', '').trim();
+  if (!key || !Array.isArray(rules) || !rules.length) return res.json({ ok: false, message: 'username والشروط مطلوبة' });
+  broadcast(key, 'rules:show', {
+    game: String(game || ''),
+    title: String(title || 'شروط اللعب'),
+    rules: rules.map(r => String(r)).filter(Boolean).slice(0, 8),
+    duration: Math.max(0, Math.min(120, parseInt(duration) || 0)),
+  });
+  res.json({ ok: true });
+});
+app.post('/api/rules/hide', (req, res) => {
+  const key = req.body.username?.toLowerCase().replace('@', '').trim();
+  if (!key) return res.json({ ok: false });
+  broadcast(key, 'rules:hide', {});
+  res.json({ ok: true });
+});
+
 app.get('/api/version', (req, res) => res.json({ version: VERSION }));
 
 // ══════════════════════════════════════════════════════════

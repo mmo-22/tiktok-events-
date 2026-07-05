@@ -158,6 +158,21 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
           <input class="input" type="number" id="answer-time" value="15" min="5" max="60">
         </div>
       </div>
+      <div style="background:var(--card2);border:1px solid rgba(245,197,66,.3);border-radius:12px;padding:12px;margin-bottom:14px">
+        <label class="field-label">📜 شروط اللعب — تظهر بالأوفرلي بستايل كوميك قبل فتح التسجيل (شرط بكل سطر)</label>
+        <textarea class="input" id="rules-text" rows="4" style="resize:vertical;line-height:1.9">اكتب كلمة التسجيل عشان تنضم للبطولة
+جاوب على كل سؤال بكتابة رقم الإجابة من 1 إلى 4
+الإجابة الغلط أو التأخير = خروج من البطولة
+آخر لاعب يبقى هو البطل 🏆</textarea>
+        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <div style="display:flex;align-items:center;gap:6px">
+            <label class="field-label" style="margin:0">مدة العرض (ثواني)</label>
+            <input class="input" type="number" id="rules-duration" value="12" min="3" max="120" style="width:80px">
+          </div>
+          <button class="btn btn-warn btn-sm" style="flex:1" onclick="showRulesThenRegister()">📜 اعرض الشروط ثم افتح التسجيل</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideRules()">إخفاء</button>
+        </div>
+      </div>
       <div class="wiz-actions">
         <button class="btn btn-success" style="flex:1" onclick="openRegistration()">📝 فتح التسجيل</button>
         <button class="btn btn-danger" style="flex:1" onclick="lockRegistration()">🔒 إيقاف التسجيل والانتقال للأسئلة</button>
@@ -518,6 +533,17 @@ function autoNext(){
     },3000);
   },answerTime*1000+3000);
 }
+
+function getRulesList(){return document.getElementById('rules-text').value.split('\n').map(function(s){return s.trim();}).filter(Boolean).slice(0,8);}
+async function showRulesThenRegister(){
+  var rules=getRulesList();
+  if(!rules.length||!username)return;
+  var duration=Math.max(3,Math.min(120,parseInt(document.getElementById('rules-duration').value)||12));
+  await fetch('/api/rules/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,game:'knockout',title:'شروط بطولة الخروج',rules,duration})});
+  setBadge('pause','📜 عرض الشروط...');
+  setTimeout(function(){openRegistration();},duration*1000);
+}
+async function hideRules(){await fetch('/api/rules/hide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});}
 
 async function openRegistration(){
   await fetch('/api/knockout/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,keyword:document.getElementById('keyword').value.trim(),maxPlayers:parseInt(document.getElementById('max-players').value)||16})});

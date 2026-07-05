@@ -1,6 +1,6 @@
 {
   "name": "tiktok-events",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "فعاليات تيك توك — TikTok Events",
   "main": "src/server.js",
   "scripts": {

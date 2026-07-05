@@ -139,5 +139,6 @@ socket.on('horse:stopped',function(){document.getElementById('box').classList.re
 var CC=['#ef4444','#3b82f6','#22c55e','#fbbf24','#a855f7','#ec4899'];
 function fireConfetti(){var layer=document.getElementById('confetti'),box=document.getElementById('box'),cx=box.offsetWidth/2,cy=box.offsetHeight/2;for(var i=0;i<40;i++){var p=document.createElement('div');p.style.cssText='position:absolute;width:7px;height:11px;left:'+cx+'px;top:'+cy+'px;background:'+CC[i%CC.length]+';border-radius:2px;';layer.appendChild(p);var a=Math.random()*Math.PI*2,d=80+Math.random()*220;p.animate([{transform:'translate(0,0) rotate(0deg)',opacity:1},{transform:'translate('+Math.cos(a)*d+'px,'+Math.sin(a)*d+'px) rotate('+(600+Math.random()*600)+'deg)',opacity:0}],{duration:1400+Math.random()*500,easing:'cubic-bezier(0.4,0,0.6,1)'});setTimeout(function(el){el.remove()}.bind(null,p),2000);}}
 </script>
+<script src="/rules-overlay.js"></script>
 </body>
 </html>

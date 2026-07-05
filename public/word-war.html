@@ -162,6 +162,18 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
         <div><label class="field-label">🔴 كلمة دخول الأحمر</label><input class="input" type="text" id="red-keyword" value="أحمر"></div>
         <div><label class="field-label">🔵 كلمة دخول الأزرق</label><input class="input" type="text" id="blue-keyword" value="أزرق"></div>
       </div>
+      <div style="background:var(--card2);border:1px solid rgba(245,197,66,.3);border-radius:12px;padding:10px;margin-bottom:10px">
+        <label class="field-label">📜 شروط اللعب (شرط بكل سطر)</label>
+        <textarea class="input" id="rules-text" rows="4" style="resize:vertical;line-height:1.9">اختر فريقك: اكتب كلمة الأحمر أو الأزرق بالشات
+اكتب كلمات من الفئة المعروضة على الشاشة
+كل كلمة صحيحة = نقطة لفريقك
+الفريق صاحب أعلى نقاط عند انتهاء الوقت يفوز 🏆</textarea>
+        <div style="display:flex;gap:6px;margin-top:8px;align-items:center;flex-wrap:wrap">
+          <input class="input" type="number" id="rules-duration" value="12" min="3" max="120" style="width:70px" title="مدة العرض بالثواني">
+          <button class="btn btn-warn btn-sm" style="flex:1" onclick="showRulesThenRegister()">📜 الشروط ثم التسجيل</button>
+          <button class="btn btn-ghost btn-sm" onclick="hideRules()">إخفاء</button>
+        </div>
+      </div>
       <button class="btn btn-success" id="reg-btn" onclick="toggleRegistration()" style="width:100%;margin-bottom:8px">📝 فتح التسجيل</button>
       <button class="btn btn-ghost btn-sm" onclick="clearTeams()" style="width:100%;color:#fca5a5">🗑 حذف الأعضاء</button>
       <div id="reg-status" style="text-align:center;margin-top:10px;font-size:.72rem;color:var(--muted);display:none;line-height:1.6">
@@ -404,6 +416,22 @@ async function startRound(idx, resetTeams = false) {
   startTimer(duration);
   setActive(true);
   renderCatGrid();
+}
+
+// ── شروط اللعب ────────────────────────────────────────────
+function getRulesList() {
+  return document.getElementById('rules-text').value.split('\n').map(s => s.trim()).filter(Boolean).slice(0, 8);
+}
+async function showRulesThenRegister() {
+  const rules = getRulesList();
+  if (!rules.length || !username) return;
+  const duration = Math.max(3, Math.min(120, parseInt(document.getElementById('rules-duration').value) || 12));
+  await fetch('/api/rules/show', { method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ username, game:'word-war', title:'شروط حرب الكلمات', rules, duration }) });
+  setTimeout(() => { if (!registrationOpen) toggleRegistration(); }, duration * 1000);
+}
+async function hideRules() {
+  await fetch('/api/rules/hide', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });
 }
 
 let registrationOpen = false;

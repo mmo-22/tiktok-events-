@@ -108,5 +108,6 @@ socket.on('gtime:ended',({stoppedAt,winner})=>{
 
 socket.on('gtime:reset',()=>{if(visInt){clearInterval(visInt);visInt=null;}if(guessInt){clearInterval(guessInt);guessInt=null;}hide();});
 </script>
+<script src="/rules-overlay.js"></script>
 </body>
 </html>

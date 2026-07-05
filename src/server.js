@@ -71,6 +71,14 @@ function broadcast(key, event, data) {
 async function connectRoom(username, sessionid = null) {
   const key = username.toLowerCase().replace('@', '').trim();
 
+  // 🛡️ حارس: منع محاولات الاتصال المتقاربة (حماية من أي spam حتى اليدوي)
+  const now = Date.now();
+  if (rooms[key] && rooms[key].lastConnectAttempt && now - rooms[key].lastConnectAttempt < 30000) {
+    const waitSec = Math.ceil((30000 - (now - rooms[key].lastConnectAttempt)) / 1000);
+    console.log(`[TikTok] @${key} connect throttled — wait ${waitSec}s`);
+    return;
+  }
+
   if (!rooms[key]) {
     rooms[key] = {
       tiktok: null,
@@ -88,6 +96,7 @@ async function connectRoom(username, sessionid = null) {
 
   const room = rooms[key];
   if (room.status === 'connected') return;
+  room.lastConnectAttempt = Date.now();
   if (room.retryTimer) { clearTimeout(room.retryTimer); room.retryTimer = null; }
   if (room.pingTimer) { clearInterval(room.pingTimer); room.pingTimer = null; }
   // Close old WebSocket properly
@@ -161,20 +170,18 @@ async function connectRoom(username, sessionid = null) {
   ws.on('close', (code, reason) => {
     if (room.pingTimer) { clearInterval(room.pingTimer); room.pingTimer = null; }
     if (room.status === 'removed') return;
-    
-    // 4429 = rate limited — wait 10 min then retry
+
+    // ⛔ ممنوع أي إعادة اتصال تلقائية — الاتصال يدوي فقط من لوحة الأدمن
     if (code === 4429) {
-      console.log(`[TikTok] @${key} rate limited (4429) — retry in 10min`);
-      room.status = 'retrying';
-      io.emit('room:status', { username: key, status: 'retrying' });
-      scheduleRetry(key, 600000);
+      console.log(`[TikTok] @${key} rate limited (4429) — NOT retrying (manual reconnect only)`);
+      room.status = 'error';
+      io.emit('room:status', { username: key, status: 'error' });
       return;
     }
-    
-    console.log(`[TikTok] Disconnected @${key} (code: ${code})`);
+
+    console.log(`[TikTok] Disconnected @${key} (code: ${code}) — NOT retrying (manual reconnect only)`);
     room.status = 'disconnected';
     io.emit('room:status', { username: key, status: 'disconnected' });
-    scheduleRetry(key, 60000);
   });
 
   ws.on('error', (err) => {
@@ -997,24 +1004,7 @@ async function connectRoom(username, sessionid = null) {
   });
 }
 
-function scheduleRetry(key, delay = 60000) {
-  const room = rooms[key];
-  if (!room || room.status === 'removed') return;
-
-  if (room.retryTimer) clearTimeout(room.retryTimer);
-  room.retryCount = (room.retryCount || 0) + 1;
-
-  // Exponential backoff: 60s → 120s → 240s → max 10min
-  const actualDelay = Math.min(delay * Math.pow(2, Math.min(room.retryCount - 1, 4)), 600000);
-  room.status = 'retrying';
-  io.emit('room:status', { username: key, status: 'retrying' });
-
-  if (room.retryCount <= 3 || room.retryCount % 10 === 0) {
-    console.log(`[TikTok] Retry @${key} in ${Math.round(actualDelay/1000)}s (attempt ${room.retryCount})`);
-  }
-
-  room.retryTimer = setTimeout(() => connectRoom(key), actualDelay);
-}
+// ⛔ scheduleRetry حُذفت نهائياً — لا إعادة اتصال تلقائية إطلاقاً (سبب حظر tik.tools)
 
 function storeMsg(key, msg) {
   const room = rooms[key];
@@ -2067,7 +2057,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v1.2';
+const VERSION = 'v1.3';
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);
@@ -3439,14 +3429,4 @@ function endGuessTime(key) {
   console.log(`[GuessTime] Ended @${key}: winner=${winner?.name || 'none'} (${winner?.guess}s, diff ${winner?.diff?.toFixed(2)}s)`);
 }
 
-// ── Keep alive heartbeat — check every 2 minutes ─────
-setInterval(() => {
-  Object.keys(rooms).forEach(key => {
-    const room = rooms[key];
-    if (room.status === 'disconnected' && !room.retryTimer) {
-      console.log(`[Heartbeat] Reconnecting @${key}`);
-      room.retryCount = 0;
-      connectRoom(key);
-    }
-  });
-}, 120000);
+// ⛔ heartbeat إعادة الاتصال حُذف نهائياً — كان يعيد الاتصال كل دقيقتين بلا توقف (سبب حظر tik.tools)

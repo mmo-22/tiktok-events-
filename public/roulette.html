@@ -51,6 +51,7 @@
 
   <div class="card" style="text-align:center">
     <button class="spin-btn" onclick="spin()">🔫 اسحب!</button>
+    <button class="btn" onclick="stopGame()" style="width:100%;margin-top:8px;background:#374151;color:#e8eaf2;padding:10px;border:none;border-radius:10px;cursor:pointer;font-family:inherit;font-weight:900">⏹ إيقاف الفعالية</button>
   </div>
 
   <div class="card">
@@ -127,6 +128,44 @@ socket.on('roulette:result',function(d){
   }
 });
 
+socket.on('roulette:locked',function(d){
+  document.getElementById('status-badge').textContent='🔒 جاهز — '+d.count+' لاعب';
+});
+
+socket.on('roulette:stopped',function(){
+  document.getElementById('status-badge').textContent='متوقف';
+  document.getElementById('status-badge').classList.remove('active');
+});
+
+async function stopGame(){
+  await fetch('/api/roulette/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
+}
+
+// استعادة الحالة عند فتح الصفحة
+if(username){
+  fetch('/api/roulette/'+username).then(function(r){return r.json();}).then(function(d){
+    if(!d||(!d.players||!d.players.length)&&!d.active)return;
+    players=(d.players||[]).map(function(p){return{name:p.name,avatar:p.avatar,alive:p.alive};});
+    renderPlayers();
+    var aliveN=players.filter(function(p){return p.alive;}).length;
+    document.getElementById('alive-count').textContent=aliveN;
+    document.getElementById('total-count').textContent=players.length;
+    if(d.keyword)document.getElementById('keyword').value=d.keyword;
+    var badge=document.getElementById('status-badge');
+    if(d.active&&d.phase==='register'){badge.textContent='📝 تسجيل';badge.classList.add('active');}
+    else if(d.active&&d.phase!=='idle'){badge.textContent='🔒 جاهز — الجولة '+d.round;badge.classList.add('active');}
+    var log=document.getElementById('log');
+    if((d.eliminated||[]).length){
+      log.innerHTML='';
+      d.eliminated.forEach(function(e){
+        var div=document.createElement('div');div.className='log-item';
+        div.textContent='💀 الجولة '+e.round+': '+e.name+' طلع!';
+        log.prepend(div);
+      });
+    }
+  });
+}
+
 function renderPlayers(){
   var el=document.getElementById('player-list');
   if(!players.length){el.innerHTML='<div class="empty">لا يوجد لاعبين</div>';return;}
@@ -137,5 +176,6 @@ function renderPlayers(){
 
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 </script>
+<script src="/rules-control.js"></script>
 </body>
 </html>

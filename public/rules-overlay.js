@@ -31,6 +31,8 @@
   var css = [
     '#rules-comic-layer{position:fixed;inset:0;z-index:99999;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4vh 4vw;background:rgba(5,5,12,.55) !important;opacity:0;transition:opacity .3s;pointer-events:none;direction:rtl}',
     '#rules-comic-layer.show{opacity:1}',
+    /* أثناء عرض الشروط: إخفاء أي واجهة تسجيل بالأوفرلي */
+    'body.rules-active #reg-banner,body.rules-active #reg-panel,body.rules-active .reg-panel,body.rules-active .reg-banner,body.rules-active #join-keywords,body.rules-active #reg-info,body.rules-active #reg-timer{visibility:hidden !important}',
     '#rules-comic-layer .rc-title{font-family:"Lalezar","Tajawal",sans-serif;font-size:clamp(2rem,5.5vw,3.6rem);color:#ffd93d;background:#ff5252;padding:.15em .9em .05em;border:5px solid #000;border-radius:18px;box-shadow:9px 9px 0 #000;transform:rotate(-2.5deg);letter-spacing:1px;margin-bottom:3.5vh;text-shadow:3px 3px 0 #000;animation:rcPop .45s cubic-bezier(.2,1.6,.4,1) both}',
     '#rules-comic-layer .rc-cards{display:flex;flex-direction:column;gap:2.2vh;width:min(92vw,720px)}',
     '#rules-comic-layer .rc-card{display:flex;align-items:center;gap:16px;background:#fff;border:4px solid #000;border-radius:16px;box-shadow:7px 7px 0 #000;padding:12px 18px;font-family:"Tajawal",sans-serif;font-weight:900;font-size:clamp(1rem,2.6vw,1.45rem);color:#111;animation:rcPop .45s cubic-bezier(.2,1.6,.4,1) both}',
@@ -85,6 +87,8 @@
     var duration = parseInt(data.duration) || 0;
     if (duration > 0) html += '<div class="rc-timer"><i id="rc-timer-bar"></i></div>';
     el.innerHTML = html;
+    // إخفاء واجهة التسجيل طول مدة عرض الشروط (تظهر تلقائياً بعد الانتهاء)
+    document.body.classList.add('rules-active');
     // إعادة تشغيل الترانزيشن
     el.classList.remove('show');
     void el.offsetWidth;
@@ -107,6 +111,7 @@
   function hideRules() {
     if (hideTimer) { clearTimeout(hideTimer); hideTimer = null; }
     if (tickTimer) { clearInterval(tickTimer); tickTimer = null; }
+    document.body.classList.remove('rules-active');
     if (layer) {
       layer.classList.remove('show');
       setTimeout(function () { if (layer) layer.innerHTML = ''; }, 350);

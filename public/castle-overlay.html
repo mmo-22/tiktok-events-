@@ -130,7 +130,8 @@ function fireProjectile(fromTeam){
   p.textContent=PROJ[(projIdx++)%PROJ.length];
   scene.appendChild(p);
   var fromR=(fromTeam==='red');           // الأحمر يمين
-  var x0=fromR?86:8, x1=fromR?10:84;
+  // الإحداثيات بوحدة style.right: قيمة صغيرة = قرب الحافة اليمنى (قلعة الأحمر)
+  var x0=fromR?10:84, x1=fromR?84:10;
   var t0=performance.now(),dur=850;
   function fr(now){
     var t=Math.min((now-t0)/dur,1);

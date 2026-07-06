@@ -168,5 +168,6 @@ socket.on('gtime:reset',()=>{setPhase('idle');stopTicking();allGuesses.clear();r
 function copyLink(){navigator.clipboard.writeText(document.getElementById('overlay-link').textContent);}
 if(username){fetch('/api/guess-time/'+username).then(r=>r.json()).then(d=>{if(d.state!=='idle'){stoppedAtVal=d.stoppedAt;setPhase(d.state);document.getElementById('eligible-count').textContent=d.eligibleCount||0;document.getElementById('guess-count').textContent=d.guessCount||0;if(d.state==='visible')startTicking();}});}
 </script>
+<script src="/rules-control.js"></script>
 </body>
 </html>

@@ -365,5 +365,6 @@ function copyLink() { navigator.clipboard.writeText(document.getElementById('ove
 if (username) { fetch(`/api/photo-challenge/${username}`).then(r=>r.json()).then(d=>{ if(d.allWinners) renderWinners(d.allWinners); }); }
 renderPuzzleList();
 </script>
+<script src="/rules-control.js"></script>
 </body>
 </html>

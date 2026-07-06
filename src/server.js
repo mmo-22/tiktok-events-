@@ -359,8 +359,10 @@ async function connectRoom(username, sessionid = null) {
     const gtGame = getGuessTime(key);
     if (gtGame.state === 'guessing' && data.comment) {
       const uid = data.userId || data.uniqueId;
-      // Parse number from comment (Arabic or Western numerals)
-      const numStr = data.comment.trim().replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d));
+      // Parse number from comment (Arabic or Western numerals + الفاصلة العشرية العربية)
+      const numStr = data.comment.trim()
+        .replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d))
+        .replace(/[٫,]/g, '.');
       const guess = parseFloat(numStr);
       if (!isNaN(guess) && guess > 0 && guess < 999 && !gtGame.guesses.has(uid)) {
         const diff = Math.abs(guess - gtGame.stoppedAt / 1000);
@@ -376,9 +378,12 @@ async function connectRoom(username, sessionid = null) {
       }
     }
     if (rlGame.active && rlGame.phase === 'register' && data.comment) {
-      const comment = data.comment.trim().toLowerCase().replace(/\s+/g,'');
+      // مطابقة مرنة: توحيد الهمزات + احتواء بدل التطابق الحرفي
+      const norm = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '').replace(/[أإآ]/g, 'ا').replace(/ة/g, 'ه').replace(/ى/g, 'ي');
+      const comment = norm(data.comment);
+      const kw = norm(rlGame.keyword);
       const uid = data.userId || data.uniqueId;
-      if (comment === rlGame.keyword && !rlGame.players.has(uid) && rlGame.players.size < rlGame.maxPlayers) {
+      if (kw && comment.includes(kw) && !rlGame.players.has(uid) && rlGame.players.size < rlGame.maxPlayers) {
         rlGame.players.set(uid, { name: data.nickname || data.uniqueId, avatar: data.profilePictureUrl || null, alive: true });
         broadcast(key, 'roulette:joined', { player: data.nickname || data.uniqueId, avatar: data.profilePictureUrl || null, count: rlGame.players.size, max: rlGame.maxPlayers });
       }
@@ -386,11 +391,12 @@ async function connectRoom(username, sessionid = null) {
     if (cwGame.active && data.comment) {
       const comment = data.comment.trim().toLowerCase().replace(/\s+/g,'');
       const uid = data.userId || data.uniqueId;
-      // Registration: keyword + أحمر/أزرق or 1/2
+      // Registration: keyword + أحمر/أزرق or 1/2 (مع توحيد الهمزات)
       if (cwGame.phase === 'register' && !cwGame.playerTeam.has(uid)) {
+        const normC = comment.replace(/[أإآ]/g, 'ا');
         let team = null;
-        if (comment.includes('أحمر') || comment.includes('احمر') || comment === '1') team = 'red';
-        else if (comment.includes('أزرق') || comment.includes('ازرق') || comment === '2') team = 'blue';
+        if (normC.includes('احمر') || comment === '1') team = 'red';
+        else if (normC.includes('ازرق') || comment === '2') team = 'blue';
         if (team) {
           cwGame.playerTeam.set(uid, team);
           cwGame[team].players.add(uid);
@@ -912,6 +918,16 @@ async function connectRoom(username, sessionid = null) {
     storeMsg(key, msg);
     broadcast(key, 'gift', msg);
     broadcast(key, 'stats', room.stats);
+
+    // خمن الوقت: مرسل الهدية أثناء الجولة يصبح "مؤهل"
+    const gtG = getGuessTime(key);
+    if (['visible', 'hidden', 'guessing'].includes(gtG.state)) {
+      const guid = data.userId || data.uniqueId || usr.nickname;
+      if (guid && !gtG.eligible.has(guid)) {
+        gtG.eligible.add(guid);
+        broadcast(key, 'gtime:eligible', { eligibleCount: gtG.eligible.size });
+      }
+    }
   });
 
   tiktok.on('member', (data) => {
@@ -2057,7 +2073,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v1.3';
+const VERSION = 'v1.6';
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);
@@ -3321,6 +3337,17 @@ app.post('/api/roulette/stop', (req, res) => {
   game.active = false; game.phase = 'idle';
   io.to(`room:${key}`).emit('roulette:stopped');
   res.json({ ok: true });
+});
+
+app.get('/api/roulette/:username', (req, res) => {
+  const key = req.params.username?.toLowerCase().replace('@','').trim();
+  const game = getRoulette(key);
+  res.json({
+    active: game.active, phase: game.phase, round: game.round,
+    keyword: game.keyword, maxPlayers: game.maxPlayers,
+    players: Array.from(game.players.values()).map(p => ({ name: p.name, avatar: p.avatar, alive: p.alive })),
+    eliminated: game.eliminated,
+  });
 });
 
 // ══════════════════════════════════════════════════════════

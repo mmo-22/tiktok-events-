@@ -134,7 +134,7 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
         <div class="sm-icon">🎡</div>
         <div>
           <h2>عجلة الحظ</h2>
-          <p>إعدادات وتشغيل الفعالية</p>
+          <p>سحب عشوائي: الجمهور يسجلون بكلمة، أسماؤهم تدخل العجلة، وتلف لتختار فائزاً 🏆</p>
         </div>
       </div>
       <span class="status-badge off" id="reg-badge"><span class="dot"></span> <span id="reg-badge-txt">التسجيل مغلق</span></span>
@@ -342,7 +342,7 @@ async function showRulesThenRegister() {
   const duration = Math.max(3, Math.min(120, parseInt(document.getElementById('rules-duration').value) || 12));
   await fetch('/api/rules/show', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ username, game:'wheel', title:'شروط عجلة الحظ', rules, duration }) });
-  setTimeout(() => { startRegistration(); }, duration * 1000);
+  setTimeout(() => { startRegistration(); }, duration * 1000 + 400);
 }
 async function hideRules() {
   await fetch('/api/rules/hide', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });

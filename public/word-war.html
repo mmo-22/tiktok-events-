@@ -148,6 +148,7 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
   <div class="cc-col">
     <div class="cc-card">
       <h4>⚙️ الإعدادات</h4>
+      <div style="font-size:.7rem;color:#8a8fa3;line-height:1.8;background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;margin-bottom:10px">💡 <b>الفكرة:</b> فريقان يتسابقان بكتابة كلمات من الفئة المعروضة — كل كلمة صحيحة نقطة، والأعلى نقاطاً عند انتهاء الوقت يفوز.</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <div><label class="field-label">مدة الجولة (ثواني)</label><input class="input" type="number" id="duration" value="60" min="15" max="120"></div>
         <div><label class="field-label">وقت الانتظار بين الجولات (ثواني)</label><input class="input" type="number" id="wait-time" value="8" min="3" max="20"></div>
@@ -428,7 +429,7 @@ async function showRulesThenRegister() {
   const duration = Math.max(3, Math.min(120, parseInt(document.getElementById('rules-duration').value) || 12));
   await fetch('/api/rules/show', { method:'POST', headers:{'Content-Type':'application/json'},
     body: JSON.stringify({ username, game:'word-war', title:'شروط حرب الكلمات', rules, duration }) });
-  setTimeout(() => { if (!registrationOpen) toggleRegistration(); }, duration * 1000);
+  setTimeout(() => { if (!registrationOpen) toggleRegistration(); }, duration * 1000 + 400);
 }
 async function hideRules() {
   await fetch('/api/rules/hide', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ username }) });

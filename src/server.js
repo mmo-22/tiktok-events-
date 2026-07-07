@@ -412,6 +412,43 @@ async function connectRoom(username, sessionid = null, opts = {}) {
     // Check Horse Race (سباق الخيل)
     const hrGame = getHorseRace(key);
 
+    // Check Squid Game (لعبة الحبار — الضوء الأخضر والأحمر)
+    const sqGame = getSquid(key);
+    if (sqGame.active && data.comment) {
+      const uid = data.userId || data.uniqueId;
+      if (sqGame.phase === 'register' && !sqGame.players.has(uid)) {
+        const normS = s => String(s || '').trim().toLowerCase().replace(/\s+/g, '').replace(/[أإآ]/g, 'ا');
+        if (normS(data.comment).includes(normS(sqGame.keyword)) && sqGame.players.size < sqGame.maxPlayers) {
+          sqGame.players.set(uid, { name: data.nickname || data.uniqueId, avatar: data.profilePictureUrl || null, steps: 0, alive: true, finished: false });
+          broadcast(key, 'squid:joined', {
+            player: data.nickname || data.uniqueId, avatar: data.profilePictureUrl || null,
+            count: sqGame.players.size, max: sqGame.maxPlayers,
+          });
+        }
+      } else if (sqGame.phase === 'playing' && sqGame.players.has(uid)) {
+        const p = sqGame.players.get(uid);
+        if (p.alive && !p.finished) {
+          if (sqGame.light === 'green') {
+            p.steps++;
+            if (p.steps >= sqGame.finishSteps) {
+              p.finished = true;
+              sqGame.winners.push({ name: p.name, avatar: p.avatar });
+              broadcast(key, 'squid:finished', { player: p.name, avatar: p.avatar, rank: sqGame.winners.length });
+              if (sqGame.winners.length >= sqGame.winnersCount || squidAliveCount(sqGame) === 0) squidEnd(key);
+            } else {
+              broadcast(key, 'squid:step', { player: p.name, avatar: p.avatar, steps: p.steps, finish: sqGame.finishSteps });
+            }
+          } else if (Date.now() - sqGame.lightChangedAt > 700) {
+            // 🔴 كتب أثناء الأحمر (بعد مهلة السماح) → إقصاء
+            p.alive = false;
+            sqGame.eliminated.push({ name: p.name, avatar: p.avatar });
+            broadcast(key, 'squid:eliminated', { player: p.name, avatar: p.avatar, aliveCount: squidAliveCount(sqGame) });
+            if (squidAliveCount(sqGame) === 0) squidEnd(key);
+          }
+        }
+      }
+    }
+
     // Check Castle War (حرب القلاع)
     const cwGame = getCastleGame(key);
 
@@ -2137,7 +2174,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v1.9';
+const VERSION = 'v2.0';
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);
@@ -3331,6 +3368,129 @@ app.post('/api/castle/stop', (req, res) => {
 // ══════════════════════════════════════════════════════════
 // ── Russian Roulette (الروليت الروسي) ───────────────────
 // ══════════════════════════════════════════════════════════
+// ── لعبة الحبار (الضوء الأخضر والأحمر) ─────────────────────
+const squidGames = {};
+function getSquid(key) {
+  if (!squidGames[key]) squidGames[key] = {
+    active: false, phase: 'idle', // idle, register, playing, ended
+    players: new Map(), // uid -> {name, avatar, steps, alive, finished}
+    winners: [], eliminated: [],
+    keyword: 'حبار', maxPlayers: 30, finishSteps: 20, winnersCount: 3,
+    light: 'red', lightChangedAt: 0,
+    auto: false, minGreen: 4, maxGreen: 8, minRed: 3, maxRed: 6, autoTimer: null,
+  };
+  return squidGames[key];
+}
+function squidAliveCount(g) {
+  let n = 0;
+  g.players.forEach(p => { if (p.alive && !p.finished) n++; });
+  return n;
+}
+function squidSetLight(key, color) {
+  const g = getSquid(key);
+  if (g.light === color) return;
+  g.light = color;
+  g.lightChangedAt = Date.now();
+  broadcast(key, 'squid:light', { light: color });
+}
+function squidAutoTick(key) {
+  const g = getSquid(key);
+  if (!g.auto || g.phase !== 'playing') return;
+  const next = g.light === 'green' ? 'red' : 'green';
+  squidSetLight(key, next);
+  const [mn, mx] = next === 'green' ? [g.minGreen, g.maxGreen] : [g.minRed, g.maxRed];
+  const dur = (mn + Math.random() * Math.max(0, mx - mn)) * 1000;
+  if (g.autoTimer) clearTimeout(g.autoTimer);
+  g.autoTimer = setTimeout(() => squidAutoTick(key), dur);
+}
+function squidEnd(key) {
+  const g = getSquid(key);
+  g.phase = 'ended';
+  g.auto = false;
+  if (g.autoTimer) { clearTimeout(g.autoTimer); g.autoTimer = null; }
+  broadcast(key, 'squid:end', { winners: g.winners, eliminatedCount: g.eliminated.length });
+}
+
+app.post('/api/squid/register', (req, res) => {
+  const { username, keyword, maxPlayers, finishSteps, winnersCount } = req.body;
+  const key = username?.toLowerCase().replace('@', '').trim();
+  if (!key) return res.json({ ok: false });
+  const g = getSquid(key);
+  if (g.autoTimer) { clearTimeout(g.autoTimer); g.autoTimer = null; }
+  g.active = true; g.phase = 'register'; g.auto = false;
+  g.players = new Map(); g.winners = []; g.eliminated = [];
+  g.keyword = (keyword || 'حبار').trim();
+  g.maxPlayers = Math.max(2, Math.min(100, parseInt(maxPlayers) || 30));
+  g.finishSteps = Math.max(5, Math.min(100, parseInt(finishSteps) || 20));
+  g.winnersCount = Math.max(1, Math.min(10, parseInt(winnersCount) || 3));
+  g.light = 'red'; g.lightChangedAt = Date.now();
+  broadcast(key, 'squid:register', { keyword: g.keyword, maxPlayers: g.maxPlayers, finishSteps: g.finishSteps });
+  res.json({ ok: true });
+});
+
+app.post('/api/squid/start', (req, res) => {
+  const { username, auto, minGreen, maxGreen, minRed, maxRed } = req.body;
+  const key = username?.toLowerCase().replace('@', '').trim();
+  if (!key) return res.json({ ok: false });
+  const g = getSquid(key);
+  if (!g.active || !g.players.size) return res.json({ ok: false, message: 'لا يوجد لاعبون' });
+  g.phase = 'playing';
+  g.minGreen = Math.max(1, parseFloat(minGreen) || 4);
+  g.maxGreen = Math.max(g.minGreen, parseFloat(maxGreen) || 8);
+  g.minRed = Math.max(1, parseFloat(minRed) || 3);
+  g.maxRed = Math.max(g.minRed, parseFloat(maxRed) || 6);
+  broadcast(key, 'squid:start', {
+    players: Array.from(g.players.values()).map(p => ({ name: p.name, avatar: p.avatar, steps: p.steps })),
+    finishSteps: g.finishSteps, count: g.players.size,
+  });
+  squidSetLight(key, 'green');
+  if (auto) { g.auto = true; const dur = (g.minGreen + Math.random() * (g.maxGreen - g.minGreen)) * 1000; g.autoTimer = setTimeout(() => squidAutoTick(key), dur); }
+  res.json({ ok: true });
+});
+
+app.post('/api/squid/light', (req, res) => {
+  const { username, color } = req.body;
+  const key = username?.toLowerCase().replace('@', '').trim();
+  if (!key || !['green', 'red'].includes(color)) return res.json({ ok: false });
+  const g = getSquid(key);
+  g.auto = false;
+  if (g.autoTimer) { clearTimeout(g.autoTimer); g.autoTimer = null; }
+  squidSetLight(key, color);
+  res.json({ ok: true, light: color });
+});
+
+app.post('/api/squid/auto', (req, res) => {
+  const { username, on } = req.body;
+  const key = username?.toLowerCase().replace('@', '').trim();
+  if (!key) return res.json({ ok: false });
+  const g = getSquid(key);
+  g.auto = !!on;
+  if (g.autoTimer) { clearTimeout(g.autoTimer); g.autoTimer = null; }
+  if (g.auto && g.phase === 'playing') squidAutoTick(key);
+  res.json({ ok: true, auto: g.auto });
+});
+
+app.post('/api/squid/stop', (req, res) => {
+  const key = req.body.username?.toLowerCase().replace('@', '').trim();
+  if (!key) return res.json({ ok: false });
+  const g = getSquid(key);
+  g.active = false; g.phase = 'idle'; g.auto = false;
+  if (g.autoTimer) { clearTimeout(g.autoTimer); g.autoTimer = null; }
+  broadcast(key, 'squid:stopped', {});
+  res.json({ ok: true });
+});
+
+app.get('/api/squid/:username', (req, res) => {
+  const key = req.params.username?.toLowerCase().replace('@', '').trim();
+  const g = getSquid(key);
+  res.json({
+    active: g.active, phase: g.phase, light: g.light, auto: g.auto,
+    keyword: g.keyword, maxPlayers: g.maxPlayers, finishSteps: g.finishSteps, winnersCount: g.winnersCount,
+    players: Array.from(g.players.values()).map(p => ({ name: p.name, avatar: p.avatar, steps: p.steps, alive: p.alive, finished: p.finished })),
+    winners: g.winners, eliminated: g.eliminated,
+  });
+});
+
 const rouletteGames = {};
 function getRoulette(key) {
   if (!rouletteGames[key]) rouletteGames[key] = {

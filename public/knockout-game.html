@@ -101,11 +101,18 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
 .obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
 
 @media(max-width:600px){
+  input,select,textarea,.input,.select{font-size:16px !important}
   .wiz-progress{padding:10px 8px}
   .wline{flex:0 0 20px}
   .wstep .wlabel{font-size:.65rem}
   .stats-cards{grid-template-columns:repeat(2,1fr)}
   .row2{grid-template-columns:1fr}
+  body{padding:12px 8px 50px}
+  .wiz-card{padding:16px 12px}
+  .wiz-actions{flex-direction:column}
+  .wiz-actions .btn{width:100%}
+  .wiz-fields{grid-template-columns:1fr}
+  .stat-card-num{font-size:1.25rem}
 }
 </style>
 </head>

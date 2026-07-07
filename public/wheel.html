@@ -114,7 +114,15 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
   .split-side{position:static}
 }
 @media(max-width:600px){
+  input,select,textarea,.input,.select{font-size:16px !important}
   .settings-grid{grid-template-columns:1fr}
+  body{padding:12px 8px 50px}
+  .split-main,.split-side{padding:14px}
+  .setting > div[style*="grid-template-columns"]{grid-template-columns:1fr !important}
+  .action-bar{flex-direction:column}
+  .action-bar .btn{width:100%}
+  .hero-actions{width:100%}
+  .timer-display{font-size:1.6rem}
 }
 </style>
 </head>

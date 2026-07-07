@@ -68,16 +68,60 @@ function broadcast(key, event, data) {
   if (event === 'stats') io.emit('room:stats', { username: key, stats: data });
 }
 
-async function connectRoom(username, sessionid = null) {
+// ── إعادة اتصال تلقائية منضبطة (بتوصية دعم tik.tools) ──
+// سريعة عند الانقطاع الطبيعي، لكن بسقف محاولات + backoff + حد يومي
+// حتى لا نكرر أبداً نمط "extreme API abuse"
+const RECONNECT_BASE_DELAY = 3000;      // 3 ثواني (توصية الدعم 2-3s)
+const RECONNECT_MAX_DELAY = 60000;      // أقصى تأخير دقيقة
+const RECONNECT_MAX_ATTEMPTS = 10;      // بعدها يتوقف ويطلب اتصال يدوي
+const RECONNECT_DAILY_CAP = 300;        // صمام أمان يومي لكل غرفة
+
+function scheduleReconnect(key, reason = '') {
+  const room = rooms[key];
+  if (!room || room.status === 'removed') return;
+
+  // تصفير العداد اليومي عند تغير اليوم
+  const today = new Date().toISOString().slice(0, 10);
+  if (room.reconnectDay !== today) { room.reconnectDay = today; room.reconnectDaily = 0; }
+  if ((room.reconnectDaily || 0) >= RECONNECT_DAILY_CAP) {
+    console.log(`[TikTok] @${key} reached daily reconnect cap (${RECONNECT_DAILY_CAP}) — stopping. Manual reconnect required.`);
+    room.status = 'error';
+    io.emit('room:status', { username: key, status: 'error' });
+    return;
+  }
+
+  room.reconnectAttempts = (room.reconnectAttempts || 0) + 1;
+  if (room.reconnectAttempts > RECONNECT_MAX_ATTEMPTS) {
+    console.log(`[TikTok] @${key} exceeded ${RECONNECT_MAX_ATTEMPTS} consecutive attempts — stopping. Manual reconnect required.`);
+    room.status = 'error';
+    io.emit('room:status', { username: key, status: 'error' });
+    return;
+  }
+
+  const delay = Math.min(RECONNECT_BASE_DELAY * Math.pow(2, room.reconnectAttempts - 1), RECONNECT_MAX_DELAY);
+  room.reconnectDaily = (room.reconnectDaily || 0) + 1;
+  room.status = 'retrying';
+  io.emit('room:status', { username: key, status: 'retrying' });
+  console.log(`[TikTok] @${key} reconnect ${room.reconnectAttempts}/${RECONNECT_MAX_ATTEMPTS} in ${Math.round(delay/1000)}s${reason ? ' (' + reason + ')' : ''} [today: ${room.reconnectDaily}/${RECONNECT_DAILY_CAP}]`);
+
+  if (room.retryTimer) clearTimeout(room.retryTimer);
+  room.retryTimer = setTimeout(() => connectRoom(key, null, { internal: true }), delay);
+}
+
+async function connectRoom(username, sessionid = null, opts = {}) {
   const key = username.toLowerCase().replace('@', '').trim();
 
-  // 🛡️ حارس: منع محاولات الاتصال المتقاربة (حماية من أي spam حتى اليدوي)
+  // 🛡️ حارس: منع محاولات الاتصال اليدوية المتقاربة
+  // (إعادة الاتصال الداخلية المنضبطة لها إيقاعها الخاص فتتجاوز الحارس)
   const now = Date.now();
-  if (rooms[key] && rooms[key].lastConnectAttempt && now - rooms[key].lastConnectAttempt < 30000) {
+  if (!opts.internal && rooms[key] && rooms[key].lastConnectAttempt && now - rooms[key].lastConnectAttempt < 30000) {
     const waitSec = Math.ceil((30000 - (now - rooms[key].lastConnectAttempt)) / 1000);
     console.log(`[TikTok] @${key} connect throttled — wait ${waitSec}s`);
     return;
   }
+
+  // الاتصال اليدوي يصفّر عداد المحاولات
+  if (!opts.internal && rooms[key]) rooms[key].reconnectAttempts = 0;
 
   if (!rooms[key]) {
     rooms[key] = {
@@ -151,6 +195,7 @@ async function connectRoom(username, sessionid = null) {
   ws.on('open', () => {
     room.status = 'connected';
     room.retryCount = 0;
+    room.lastOpenAt = Date.now();
     console.log(`[TikTok] Connected @${key}`);
     io.emit('room:status', { username: key, status: 'connected', viewers: 0 });
     broadcast(key, 'stats', room.stats);
@@ -171,17 +216,32 @@ async function connectRoom(username, sessionid = null) {
     if (room.pingTimer) { clearInterval(room.pingTimer); room.pingTimer = null; }
     if (room.status === 'removed') return;
 
-    // ⛔ ممنوع أي إعادة اتصال تلقائية — الاتصال يدوي فقط من لوحة الأدمن
+    // اتصال صمد أكثر من دقيقة = مستقر → نصفّر عداد المحاولات المتتالية
+    if (room.lastOpenAt && Date.now() - room.lastOpenAt > 60000) {
+      room.reconnectAttempts = 0;
+    }
+
     if (code === 4429) {
-      console.log(`[TikTok] @${key} rate limited (4429) — NOT retrying (manual reconnect only)`);
-      room.status = 'error';
-      io.emit('room:status', { username: key, status: 'error' });
+      // Rate limit: محاولة وحدة متأخرة فقط ثم إيقاف
+      console.log(`[TikTok] @${key} rate limited (4429)`);
+      if ((room.reconnectAttempts || 0) >= 1) {
+        room.status = 'error';
+        io.emit('room:status', { username: key, status: 'error' });
+        console.log(`[TikTok] @${key} 4429 persisted — stopping. Manual reconnect required.`);
+        return;
+      }
+      room.reconnectAttempts = (room.reconnectAttempts || 0) + 1;
+      room.status = 'retrying';
+      io.emit('room:status', { username: key, status: 'retrying' });
+      if (room.retryTimer) clearTimeout(room.retryTimer);
+      room.retryTimer = setTimeout(() => connectRoom(key, null, { internal: true }), 600000);
       return;
     }
 
-    console.log(`[TikTok] Disconnected @${key} (code: ${code}) — NOT retrying (manual reconnect only)`);
+    console.log(`[TikTok] Disconnected @${key} (code: ${code}) — auto-reconnect (controlled)`);
     room.status = 'disconnected';
     io.emit('room:status', { username: key, status: 'disconnected' });
+    scheduleReconnect(key, `close ${code}`);
   });
 
   ws.on('error', (err) => {
@@ -222,6 +282,9 @@ async function connectRoom(username, sessionid = null) {
       for (const msg of messages) {
         const rawType = msg.event || msg.type;
         if (rawType === 'ping') continue;
+        // عداد تشخيصي لكل نوع حدث
+        if (!room.eventCounts) room.eventCounts = {};
+        room.eventCounts[rawType] = (room.eventCounts[rawType] || 0) + 1;
         const mappedEvent = EVENT_MAP[rawType] || rawType;
 
         if (mappedEvent && !seenEvents.has(rawType)) {
@@ -1992,6 +2055,7 @@ app.get('/api/rooms', (req, res) => {
     status: room.status,
     stats: room.stats,
     msgCount: room.messages.length,
+    eventCounts: room.eventCounts || {},
   })));
 });
 
@@ -2073,7 +2137,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v1.6';
+const VERSION = 'v1.9';
 const PORT = process.env.PORT || 3000;
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);

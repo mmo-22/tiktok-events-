@@ -132,7 +132,17 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
 .obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
 
 @media(max-width:1050px){.cc{grid-template-columns:1fr}}
-@media(max-width:600px){.cc-screens{grid-template-columns:1fr}}
+@media(max-width:600px){
+  input,select,textarea,.input,.select{font-size:16px !important}
+  .cc-screens{grid-template-columns:1fr}
+  body{padding:12px 8px 50px}
+  .cc-card{padding:12px 10px}
+  .main-action-bar .btn{min-width:calc(50% - 8px);font-size:.78rem;padding:10px 8px}
+  .live-score{font-size:1.7rem}
+  .cat-grid{grid-template-columns:repeat(auto-fill,minmax(88px,1fr))}
+  .live-meter{flex-wrap:wrap;gap:8px}
+  .topnav{flex-wrap:wrap;gap:8px}
+}
 </style>
 </head>
 <body>

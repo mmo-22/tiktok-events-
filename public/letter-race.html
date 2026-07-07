@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>سباق الحروف - تحكم</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
@@ -37,6 +38,15 @@
   .live-feed{max-height:200px;overflow-y:auto;display:flex;flex-direction:column;gap:4px}
   .live-item{padding:6px 10px;background:var(--surface2);border-radius:6px;font-size:12px}
   .live-item.word{color:var(--green)}.live-item.win{color:var(--gold)}
+</style>
+<style>
+/* تحسينات الجوال المشتركة */
+@media(max-width:600px){
+  input,select,textarea{font-size:16px !important}
+  button{min-height:40px}
+  body{padding-left:8px !important;padding-right:8px !important}
+}
+*{-webkit-tap-highlight-color:transparent}
 </style>
 </head>
 <body>

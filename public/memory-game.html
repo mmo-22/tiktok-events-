@@ -2,6 +2,7 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تحدي الذاكرة - تحكم</title>
 <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
@@ -42,6 +43,15 @@
   .timer-display{text-align:center;font-size:36px;font-weight:900;color:var(--purple);margin:8px 0}
   .empty{text-align:center;padding:24px;color:var(--muted);font-size:13px}
   .overlay-link{background:var(--surface2);padding:10px;border-radius:8px;font-family:monospace;font-size:12px;word-break:break-all;cursor:pointer}
+</style>
+<style>
+/* تحسينات الجوال المشتركة */
+@media(max-width:600px){
+  input,select,textarea{font-size:16px !important}
+  button{min-height:40px}
+  body{padding-left:8px !important;padding-right:8px !important}
+}
+*{-webkit-tap-highlight-color:transparent}
 </style>
 </head>
 <body>

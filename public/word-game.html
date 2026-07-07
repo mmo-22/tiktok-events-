@@ -126,9 +126,16 @@ body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min
 .obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
 
 @media(max-width:600px){
+  input,select,textarea,.input,.select{font-size:16px !important}
   .fh-quick{grid-template-columns:repeat(2,1fr)}
   .fh-letter{width:42px;height:50px;font-size:1.4rem}
   .fh-drawer-grid{grid-template-columns:1fr}
+  body{padding:12px 8px 50px}
+  .fh-hero{padding:22px 14px}
+  .fh-title{font-size:1.3rem}
+  .fh-meta{gap:16px}
+  .fh-hero-actions .btn{flex:1}
+  .fh-drawer-grid > div[style*="span 2"]{grid-column:span 1 !important}
 }
 </style>
 </head>

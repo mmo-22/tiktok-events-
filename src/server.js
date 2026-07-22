@@ -246,6 +246,13 @@ async function connectRoom(username, sessionid = null, opts = {}) {
 
   ws.on('error', (err) => {
     console.log(`[TikTok] WS Error @${key}: ${err?.message || 'unknown'}`);
+    // فشل المصافحة (مثل 522): لو ما تبعه close خلال 5 ثوانٍ نجدول إعادة الاتصال بأنفسنا
+    const wsRef = ws;
+    setTimeout(() => {
+      if (room.tiktok === wsRef && room.status !== 'connected' && room.status !== 'removed' && !room.retryTimer) {
+        scheduleReconnect(key, 'ws error without close');
+      }
+    }, 5000);
   });
 
   // Map raw TikTok event names to simple names
@@ -2174,8 +2181,19 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v2.0.2';
+const VERSION = 'v2.0.4';
 const PORT = process.env.PORT || 3000;
+// ── شبكات أمان على مستوى العملية ─────────────────────────
+// أي خطأ غير معالَج (مثل فشل مصافحة WebSocket بـ 522 من Cloudflare)
+// يُسجَّل ولا يُسقط السيرفر — الغرف والألعاب تبقى حية
+process.on('uncaughtException', (err) => {
+  console.error(`[FATAL-CAUGHT] uncaughtException: ${err?.message || err}`);
+  if (err?.stack) console.error(err.stack.split('\n').slice(0, 4).join('\n'));
+});
+process.on('unhandledRejection', (reason) => {
+  console.error(`[FATAL-CAUGHT] unhandledRejection: ${reason?.message || reason}`);
+});
+
 httpServer.listen(PORT, () => {
   console.log(`\n🎉 فعاليات تيك توك ${VERSION} running at http://localhost:${PORT}\n`);
 });

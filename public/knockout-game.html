@@ -3,248 +3,126 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🏆 بطولة الخروج — فعاليات تيك توك</title>
-<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;900&display=swap" rel="stylesheet">
+<title>بطولة خروج - تحكم</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;900&display=swap" rel="stylesheet">
 <script src="/socket.io/socket.io.js"></script>
 <style>
-:root{
-  --bg:#06060b;--bg2:#0a0a14;--card:#0c0c16;--card2:#10101e;--card3:#161628;--border:#1c1c2e;
-  --accent:#0891b2;--accent2:#22d3ee;--gold:#f5c542;
-  --text:#e8eaf2;--muted:#8a8fa3;
-  --green:#22c55e;--red:#ef4444;--purple:#a855f7;--orange:#f97316;--blue:#3b82f6
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;min-height:100vh;padding:18px 12px 60px}
-
-.status-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:.7rem;font-weight:900}
-.status-badge.live{background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.4);color:#86efac}
-.status-badge.pause{background:rgba(245,197,66,.13);border:1px solid rgba(245,197,66,.4);color:#fde68a}
-.status-badge.off{background:rgba(125,125,125,.1);border:1px solid #444;color:#999}
-.status-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
-.status-badge.live .dot{animation:pulse 1.4s infinite}
-@keyframes pulse{50%{opacity:.4}}
-
-.btn{font-family:inherit;font-weight:900;border:none;border-radius:12px;cursor:pointer;transition:.2s;display:inline-flex;align-items:center;justify-content:center;gap:6px}
-.btn:active{transform:scale(.95)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
-.btn-primary{background:linear-gradient(135deg,var(--accent),var(--accent2));color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(8,145,178,.35)}
-.btn-success{background:linear-gradient(135deg,#16a34a,#22c55e);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(34,197,94,.35)}
-.btn-danger{background:linear-gradient(135deg,#dc2626,#ef4444);color:#fff;padding:10px 20px;font-size:.88rem;box-shadow:0 4px 18px rgba(239,68,68,.35)}
-.btn-warn{background:linear-gradient(135deg,#d97706,#f59e0b);color:#fff;padding:10px 20px;font-size:.88rem}
-.btn-gold{background:linear-gradient(135deg,#d9a406,#f5c542);color:#241a00;padding:10px 20px;font-size:.88rem}
-.btn-ghost{background:transparent;border:1px solid var(--border);color:var(--text);padding:9px 16px;font-size:.82rem}
-.btn-ghost:hover{border-color:var(--accent2);color:var(--accent2)}
-.btn-sm{padding:6px 12px;font-size:.75rem;border-radius:9px}
-
-.input,.select{background:var(--card3);border:1px solid var(--border);color:var(--text);padding:9px 12px;border-radius:10px;font-family:inherit;font-size:.82rem;outline:none;transition:.2s;width:100%}
-.input:focus,.select:focus{border-color:var(--accent2);box-shadow:0 0 0 3px rgba(34,211,238,.12)}
-.field-label{display:block;font-size:.74rem;color:var(--muted);font-weight:700;margin-bottom:5px}
-
-.topnav{max-width:760px;margin:0 auto 14px;display:flex;align-items:center;justify-content:space-between}
-.topnav a{color:var(--accent2);text-decoration:none;font-weight:900;font-size:.8rem;border:1px solid var(--border);padding:7px 14px;border-radius:30px;background:var(--card);transition:.2s}
-.topnav a:hover{border-color:var(--accent2)}
-.topnav .who{font-size:.8rem;color:var(--muted);font-weight:900;direction:ltr}
-
-/* Wizard */
-.wizard{max-width:760px;margin:0 auto}
-.wiz-progress{display:flex;align-items:center;gap:0;margin-bottom:24px;background:var(--card);border:1px solid var(--border);border-radius:18px;padding:14px 16px}
-.wstep{flex:1;display:flex;flex-direction:column;align-items:center;gap:6px;position:relative;cursor:pointer}
-.wstep .wnum{width:32px;height:32px;border-radius:50%;background:var(--card2);border:2px solid var(--border);color:var(--muted);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.85rem;transition:.3s;z-index:2}
-.wstep .wlabel{font-size:.72rem;font-weight:900;color:var(--muted)}
-.wstep.done .wnum{background:var(--green);border-color:var(--green);color:#fff}
-.wstep.done .wlabel{color:#86efac}
-.wstep.active .wnum{background:linear-gradient(135deg,var(--accent),var(--accent2));border-color:var(--accent2);color:#fff;box-shadow:0 0 18px rgba(34,211,238,.4)}
-.wstep.active .wlabel{color:var(--accent2)}
-.wline{flex:0 0 60px;height:2px;background:var(--border);position:relative;top:-12px}
-.wline.done{background:var(--green)}
-
-.wiz-card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:22px;margin-bottom:14px}
-.wiz-card h3{font-size:1.05rem;font-weight:900;margin-bottom:4px;display:flex;align-items:center;gap:8px}
-.wiz-card .wd{font-size:.78rem;color:var(--muted);margin-bottom:18px}
-.wpanel{display:none}
-.wpanel.active{display:block}
-
-.wiz-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:18px}
-
-.q-bank{display:flex;flex-direction:column;gap:8px;max-height:260px;overflow-y:auto}
-.q-item{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:10px 12px;display:flex;align-items:center;gap:10px;cursor:pointer;transition:.15s}
-.q-item:hover{border-color:var(--accent2)}
-.q-item.used{opacity:.25}
-.q-item .qn{background:var(--card3);color:var(--muted);width:26px;height:26px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:.7rem;flex-shrink:0}
-.q-item .qt{flex:1;font-size:.82rem;font-weight:700}
-.q-item .qcat{font-size:.66rem;color:#86efac;background:rgba(34,197,94,.08);padding:2px 8px;border-radius:6px;white-space:nowrap}
-
-.wiz-actions{display:flex;justify-content:space-between;align-items:center;padding-top:18px;border-top:1px solid var(--border);gap:8px;flex-wrap:wrap}
-
-/* Stats */
-.stats-cards{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:14px;max-width:760px;margin-left:auto;margin-right:auto}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:14px;text-align:center}
-.stat-card-num{font-size:1.6rem;font-weight:900}
-.stat-card-label{font-size:.68rem;color:var(--muted);margin-top:2px;font-weight:700}
-
-/* Options with radio */
-.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.opt-input{position:relative;margin-bottom:10px}
-.opt-input .input{padding-left:38px}
-.opt-radio{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:19px;height:19px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:.6rem;transition:.15s;color:transparent}
-.opt-radio.selected{background:var(--green);border-color:var(--green);color:#fff}
-
-/* Players */
-.player-list{display:flex;flex-direction:column;gap:5px;max-height:300px;overflow-y:auto}
-.player-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:9px;font-size:.8rem;border:1px solid var(--border)}
-.player-item.alive{background:rgba(34,197,94,.06);border-color:rgba(34,197,94,.2)}
-.player-item.dead{background:rgba(239,68,68,.05);border-color:rgba(239,68,68,.15);opacity:.4;text-decoration:line-through}
-.player-name{flex:1;font-weight:900}
-.empty{text-align:center;padding:22px;color:var(--muted);font-size:.78rem}
-
-.obs-link{background:var(--card2);border:1px solid var(--border);border-radius:10px;padding:8px 10px;font-size:.7rem;color:var(--accent2);display:flex;align-items:center;gap:8px;font-family:monospace}
-.obs-link b{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;direction:ltr;text-align:left;font-weight:400}
-
+  :root{--bg:#0d0d14;--surface:#181824;--surface2:#242436;--border:#2d2d40;--text:#f0f0f5;--muted:#9a9ab0;--accent:#ff0050;--red:#ef4444;--green:#1dba72;--gold:#ffd700}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--text);font-family:'Tajawal',sans-serif;padding:20px;min-height:100vh}
+  .wrap{max-width:800px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+  .header{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;background:var(--surface);border-radius:12px}
+  .header h1{font-size:22px}
+  .badge{font-size:12px;padding:4px 12px;border-radius:20px;background:var(--surface2);color:var(--muted)}
+  .badge.active{background:var(--red);color:#fff}
+  .card{background:var(--surface);border-radius:14px;padding:16px;border:1px solid var(--border)}
+  .card-title{font-size:15px;font-weight:700;margin-bottom:12px;color:var(--red)}
+  .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+  .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .field{margin-bottom:12px}
+  .field label{display:block;font-size:13px;color:var(--muted);margin-bottom:6px}
+  .field input,.field select{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:inherit;font-size:14px}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btn{padding:11px 16px;border:none;border-radius:10px;font-family:inherit;font-weight:700;cursor:pointer;font-size:14px}
+  .opt-input{position:relative}
+  .opt-input input{padding-right:36px}
+  .opt-radio{position:absolute;left:10px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:50%;border:2px solid var(--border);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:10px;transition:all .15s}
+  .opt-radio.selected{background:var(--green);border-color:var(--green);color:#fff}
+  .player-item{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;margin-bottom:4px;font-size:13px}
+  .player-item.alive{background:rgba(29,186,114,.06);border:1px solid rgba(29,186,114,.15)}
+  .player-item.dead{background:rgba(239,68,68,.06);border:1px solid rgba(239,68,68,.15);opacity:.4;text-decoration:line-through}
+  .player-name{flex:1;font-weight:700}
+  .stats-cards{display:flex;gap:10px;margin-bottom:14px}
+  .stat-card{flex:1;background:var(--surface2);border-radius:10px;padding:14px;text-align:center}
+  .stat-card-num{font-size:28px;font-weight:900}
+  .stat-card-label{font-size:11px;color:var(--muted);margin-top:2px}
+  .empty{text-align:center;padding:24px;color:var(--muted);font-size:13px}
+  .overlay-link{background:var(--surface2);padding:10px;border-radius:8px;font-family:monospace;font-size:12px;word-break:break-all;cursor:pointer}
+  .q-bank{max-height:250px;overflow-y:auto;display:flex;flex-direction:column;gap:6px}
+  .q-item{padding:10px 12px;background:var(--surface2);border-radius:8px;cursor:pointer;transition:all .15s;border:1px solid transparent}
+  .q-item:hover{border-color:var(--red)}
+  .q-item.used{opacity:.2}
+  .q-item-text{font-size:13px;font-weight:700}
+  .q-item-correct{font-size:11px;color:var(--green)}
+</style>
+<style>
+/* تحسينات الجوال المشتركة */
 @media(max-width:600px){
-  input,select,textarea,.input,.select{font-size:16px !important}
-  .wiz-progress{padding:10px 8px}
-  .wline{flex:0 0 20px}
-  .wstep .wlabel{font-size:.65rem}
-  .stats-cards{grid-template-columns:repeat(2,1fr)}
-  .row2{grid-template-columns:1fr}
-  body{padding:12px 8px 50px}
-  .wiz-card{padding:16px 12px}
-  .wiz-actions{flex-direction:column}
-  .wiz-actions .btn{width:100%}
-  .wiz-fields{grid-template-columns:1fr}
-  .stat-card-num{font-size:1.25rem}
+  input,select,textarea{font-size:16px !important}
+  button{min-height:40px}
+  body{padding-left:8px !important;padding-right:8px !important}
 }
+*{-webkit-tap-highlight-color:transparent}
 </style>
 </head>
 <body>
+<div class="wrap">
+  <div class="header"><h1>🏆 بطولة خروج</h1><span class="badge" id="status-badge">متوقف</span></div>
 
-<div class="topnav">
-  <a href="/admin.html">← لوحة الأدمن</a>
-  <span style="display:flex;align-items:center;gap:10px">
-    <span class="status-badge off" id="status-badge"><span class="dot"></span> <span id="status-txt">متوقف</span></span>
-    <span class="who" id="who">—</span>
-  </span>
-</div>
-
-<div class="stats-cards">
-  <div class="stat-card"><div class="stat-card-num" id="s-alive" style="color:#86efac">0</div><div class="stat-card-label">باقي</div></div>
-  <div class="stat-card"><div class="stat-card-num" id="s-round" style="color:var(--gold)">0</div><div class="stat-card-label">الجولة</div></div>
-  <div class="stat-card"><div class="stat-card-num" id="s-elim" style="color:#fca5a5">0</div><div class="stat-card-label">طلعوا</div></div>
-  <div class="stat-card"><div class="stat-card-num" id="s-total" style="color:var(--accent2)">0</div><div class="stat-card-label">إجمالي</div></div>
-</div>
-
-<div class="wizard">
-
-  <!-- Progress -->
-  <div class="wiz-progress">
-    <div class="wstep active" id="ws-1" onclick="goStep(1)"><div class="wnum">1</div><div class="wlabel">التسجيل</div></div>
-    <div class="wline" id="wl-1"></div>
-    <div class="wstep" id="ws-2" onclick="goStep(2)"><div class="wnum">2</div><div class="wlabel">الأسئلة</div></div>
-    <div class="wline" id="wl-2"></div>
-    <div class="wstep" id="ws-3" onclick="goStep(3)"><div class="wnum">3</div><div class="wlabel">التشغيل</div></div>
-    <div class="wline" id="wl-3"></div>
-    <div class="wstep" id="ws-4" onclick="goStep(4)"><div class="wnum">4</div><div class="wlabel">اللاعبين</div></div>
-  </div>
-
-  <!-- Step 1: Registration -->
-  <div class="wpanel active" id="wp-1">
-    <div class="wiz-card">
-      <h3>📝 التسجيل</h3>
-      <div class="wd">💡 <b>الفكرة:</b> بطولة إقصاء — أسئلة متتالية، من يجاوب غلط أو يتأخر ينقذف من الحلبة، وآخر واقف هو البطل.<br>حدّد كلمة التسجيل وافتح الباب — كل من يكتبها في الشات ينضم للبطولة</div>
-      <div class="wiz-fields">
-        <div>
-          <label class="field-label">كلمة التسجيل</label>
-          <input class="input" type="text" id="keyword" value="بطولة">
-        </div>
-        <div>
-          <label class="field-label">الحد الأقصى للاعبين</label>
-          <input class="input" type="number" id="max-players" value="16" min="4" max="64">
-        </div>
-        <div>
-          <label class="field-label">وقت الإجابة (ثواني)</label>
-          <input class="input" type="number" id="answer-time" value="15" min="5" max="60">
-        </div>
-      </div>
-      <div style="background:var(--card2);border:1px solid rgba(245,197,66,.3);border-radius:12px;padding:12px;margin-bottom:14px">
-        <label class="field-label">📜 شروط اللعب — تظهر بالأوفرلي بستايل كوميك قبل فتح التسجيل (شرط بكل سطر)</label>
-        <textarea class="input" id="rules-text" rows="4" style="resize:vertical;line-height:1.9">اكتب كلمة التسجيل عشان تنضم للبطولة
-جاوب على كل سؤال بكتابة رقم الإجابة من 1 إلى 4
-الإجابة الغلط أو التأخير = خروج من البطولة
-آخر لاعب يبقى هو البطل 🏆</textarea>
-        <div style="display:flex;gap:8px;margin-top:8px;align-items:center;flex-wrap:wrap">
-          <div style="display:flex;align-items:center;gap:6px">
-            <label class="field-label" style="margin:0">مدة العرض (ثواني)</label>
-            <input class="input" type="number" id="rules-duration" value="12" min="3" max="120" style="width:80px">
-          </div>
-          <button class="btn btn-warn btn-sm" style="flex:1" onclick="showRulesThenRegister()">📜 اعرض الشروط ثم افتح التسجيل</button>
-          <button class="btn btn-ghost btn-sm" onclick="hideRules()">إخفاء</button>
-        </div>
-      </div>
-      <div class="wiz-actions">
-        <button class="btn btn-success" style="flex:1" onclick="openRegistration()">📝 فتح التسجيل</button>
-        <button class="btn btn-danger" style="flex:1" onclick="lockRegistration()">🔒 إيقاف التسجيل والانتقال للأسئلة</button>
-      </div>
+  <div class="card">
+    <div class="card-title">📝 المرحلة 1: التسجيل</div>
+    <div class="row3">
+      <div class="field"><label>كلمة التسجيل</label><input type="text" id="keyword" value="بطولة"></div>
+      <div class="field"><label>الحد الأقصى</label><input type="number" id="max-players" value="16" min="4" max="64"></div>
+      <div class="field"><label>وقت الإجابة (ثواني)</label><input type="number" id="answer-time" value="15" min="5" max="60"></div>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="openRegistration()" style="flex:1;background:var(--green);color:#fff">📝 فتح التسجيل</button>
+      <button class="btn" onclick="lockRegistration()" style="flex:1;background:var(--red);color:#fff">🔒 إيقاف التسجيل</button>
     </div>
   </div>
 
-  <!-- Step 2: Questions -->
-  <div class="wpanel" id="wp-2">
-    <div class="wiz-card">
-      <h3>❓ بنك الأسئلة</h3>
-      <div class="wd">اضغط على أي سؤال لطرحه فوراً — الأسئلة المستخدمة تظهر باهتة</div>
-      <div class="q-bank" id="q-bank"></div>
-    </div>
-    <div class="wiz-card">
-      <h3>✍️ سؤال مخصص</h3>
-      <div class="wd">اكتب سؤالك وحدّد الإجابة الصحيحة بالضغط على الدائرة</div>
-      <div style="margin-bottom:10px"><input class="input" type="text" id="custom-q" placeholder="اكتب السؤال..."></div>
+  <div class="stats-cards" id="stats-cards">
+    <div class="stat-card"><div class="stat-card-num" id="s-alive" style="color:var(--green)">0</div><div class="stat-card-label">باقي</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="s-round" style="color:var(--gold)">0</div><div class="stat-card-label">الجولة</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="s-elim" style="color:var(--red)">0</div><div class="stat-card-label">طلعوا</div></div>
+    <div class="stat-card"><div class="stat-card-num" id="s-total">0</div><div class="stat-card-label">إجمالي</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">❓ المرحلة 2: الأسئلة</div>
+    <div class="card-title" style="color:var(--muted);font-size:12px">من البنك</div>
+    <div class="q-bank" id="q-bank"></div>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+      <div class="card-title" style="color:var(--muted);font-size:12px">سؤال مخصص</div>
+      <div class="field"><input type="text" id="custom-q" placeholder="اكتب السؤال..."></div>
       <div class="row2">
-        <div class="opt-input"><input class="input" type="text" id="co-1" placeholder="الخيار 1"><div class="opt-radio selected" id="cr-1" onclick="setC(1)">✓</div></div>
-        <div class="opt-input"><input class="input" type="text" id="co-2" placeholder="الخيار 2"><div class="opt-radio" id="cr-2" onclick="setC(2)">✓</div></div>
+        <div class="opt-input field"><input type="text" id="co-1" placeholder="الخيار 1"><div class="opt-radio selected" id="cr-1" onclick="setC(1)">✓</div></div>
+        <div class="opt-input field"><input type="text" id="co-2" placeholder="الخيار 2"><div class="opt-radio" id="cr-2" onclick="setC(2)">✓</div></div>
       </div>
       <div class="row2">
-        <div class="opt-input"><input class="input" type="text" id="co-3" placeholder="الخيار 3"><div class="opt-radio" id="cr-3" onclick="setC(3)">✓</div></div>
-        <div class="opt-input"><input class="input" type="text" id="co-4" placeholder="الخيار 4"><div class="opt-radio" id="cr-4" onclick="setC(4)">✓</div></div>
+        <div class="opt-input field"><input type="text" id="co-3" placeholder="الخيار 3"><div class="opt-radio" id="cr-3" onclick="setC(3)">✓</div></div>
+        <div class="opt-input field"><input type="text" id="co-4" placeholder="الخيار 4"><div class="opt-radio" id="cr-4" onclick="setC(4)">✓</div></div>
       </div>
-      <div class="wiz-actions">
-        <button class="btn btn-primary" style="width:100%" onclick="askCustom()">▶ اطرح السؤال المخصص</button>
-      </div>
+      <button class="btn" onclick="askCustom()" style="width:100%;background:var(--red);color:#fff">▶ اطرح السؤال</button>
     </div>
   </div>
 
-  <!-- Step 3: Run -->
-  <div class="wpanel" id="wp-3">
-    <div class="wiz-card">
-      <h3>🎮 التشغيل</h3>
-      <div class="wd">الوضع التلقائي يطرح سؤال عشوائي، يكشف الإجابة، وينتقل للسؤال التالي حتى يبقى فائز واحد</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <button class="btn btn-warn" id="auto-btn" onclick="toggleAuto()" style="flex:1;font-size:.95rem;padding:13px">▶ بدء الأسئلة التلقائية</button>
-      </div>
-      <div class="wiz-actions" style="border-top:none;padding-top:0">
-        <button class="btn btn-gold" style="flex:1" onclick="nextFromBank()">⏭ سؤال عشوائي</button>
-        <button class="btn btn-success" style="flex:1" onclick="revealAnswer()">🔓 اكشف الإجابة</button>
-        <button class="btn btn-danger" style="flex:1" onclick="stopGame()">⏹ إيقاف البطولة</button>
-      </div>
+  <div class="card">
+    <div class="card-title">🎮 التحكم</div>
+    <div class="actions" style="margin-bottom:8px">
+      <button class="btn" id="auto-btn" onclick="toggleAuto()" style="flex:1;background:#f59e0b;color:#fff;font-size:15px">▶ بدء الأسئلة</button>
+    </div>
+    <div class="actions">
+      <button class="btn" onclick="nextFromBank()" style="flex:1;background:var(--gold);color:#000">⏭ سؤال عشوائي</button>
+      <button class="btn" onclick="revealAnswer()" style="flex:1;background:var(--green);color:#fff">🔓 اكشف</button>
+      <button class="btn" onclick="stopGame()" style="flex:1;background:var(--red);color:#fff">⏹ إيقاف</button>
     </div>
   </div>
 
-  <!-- Step 4: Players -->
-  <div class="wpanel" id="wp-4">
-    <div class="wiz-card">
-      <h3>👥 اللاعبين</h3>
-      <div class="wd">الأخضر باقي في البطولة — الأحمر خرج</div>
-      <div class="player-list" id="player-list"><div class="empty">لا يوجد لاعبين</div></div>
+  <div class="card">
+    <div class="card-title">👥 اللاعبين</div>
+    <div id="player-list"><div class="empty">لا يوجد لاعبين</div></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔗 رابط الـ Overlay</div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <div class="overlay-link" id="overlay-link" style="flex:1">—</div>
+      <button class="btn" onclick="copyLink()" style="background:var(--red);color:#fff;padding:10px 16px;font-size:13px">📋 نسخ</button>
     </div>
   </div>
-
-  <!-- OBS link (always visible) -->
-  <div class="wiz-card" style="padding:14px 18px">
-    <div style="font-size:.72rem;color:var(--muted);font-weight:900;margin-bottom:8px">🔗 رابط الـ Overlay لـ OBS</div>
-    <div class="obs-link"><b id="overlay-link">—</b><button class="btn btn-sm btn-ghost" onclick="copyLink()">📋 نسخ</button></div>
-  </div>
-
 </div>
-
 <script>
 var QS=[
   {q:"ما عاصمة فرنسا؟",opts:["لندن","باريس","برلين","مدريد"],correct:2},
@@ -471,9 +349,9 @@ var QS=[
   {q:"كم عدد الأنبياء المذكورين في القرآن؟",opts:["20","25","28","30"],correct:2},
 ];
 var params=new URLSearchParams(location.search),username=params.get('username')||'';
-var socket=io();if(username){socket.emit('join',{username});document.getElementById('who').textContent='@'+username;}
+var socket=io();if(username)socket.emit('join',{username});
 document.getElementById('overlay-link').textContent=location.origin+'/knockout-overlay.html?username='+username;
-function copyLink(){navigator.clipboard.writeText(document.getElementById('overlay-link').textContent);var el=document.getElementById('overlay-link');el.style.color='#22c55e';setTimeout(function(){el.style.color='';},1200);}
+function copyLink(){navigator.clipboard.writeText(document.getElementById('overlay-link').textContent);document.getElementById('overlay-link').style.borderColor='#1dba72';setTimeout(function(){document.getElementById('overlay-link').style.borderColor='';},1000);}
 
 var correctAnswer=1,usedQs=new Set();
 var autoMode=false,autoTimer=null;
@@ -481,37 +359,16 @@ var autoMode=false,autoTimer=null;
 function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function setC(n){correctAnswer=n;for(var i=1;i<=4;i++)document.getElementById('cr-'+i).classList.toggle('selected',i===n);}
 
-/* Wizard nav */
-var curStep=1;
-function goStep(n){
-  curStep=n;
-  for(var i=1;i<=4;i++){
-    document.getElementById('wp-'+i).classList.toggle('active',i===n);
-    var ws=document.getElementById('ws-'+i);
-    ws.classList.toggle('active',i===n);
-    ws.classList.toggle('done',i<n);
-    if(i<4){document.getElementById('wl-'+i).classList.toggle('done',i<n);}
-  }
-}
-
-function setBadge(cls,txt){
-  var b=document.getElementById('status-badge');
-  b.className='status-badge '+cls;
-  document.getElementById('status-txt').textContent=txt;
-}
-
 function toggleAuto(){
   autoMode=!autoMode;
   var btn=document.getElementById('auto-btn');
   if(autoMode){
-    btn.textContent='⏸ إيقاف الأسئلة التلقائية';
-    btn.className='btn btn-danger';
-    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    btn.textContent='⏸ إيقاف الأسئلة';
+    btn.style.background='#dc2626';
     autoNext();
   } else {
-    btn.textContent='▶ بدء الأسئلة التلقائية';
-    btn.className='btn btn-warn';
-    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    btn.textContent='▶ بدء الأسئلة';
+    btn.style.background='#f59e0b';
     if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
   }
 }
@@ -520,19 +377,19 @@ function autoNext(){
   if(!autoMode) return;
   nextFromBank();
   var answerTime=parseInt(document.getElementById('answer-time').value)||15;
+  // Wait for answer time + 3s for reveal + 3s pause
   autoTimer=setTimeout(function(){
     if(!autoMode) return;
     revealAnswer();
     autoTimer=setTimeout(function(){
       if(!autoMode) return;
       loadPlayers().then(function(){
+        // Check if game is finished
         var alive=parseInt(document.getElementById('s-alive').textContent)||0;
         if(alive<=1){
           autoMode=false;
-          var btn=document.getElementById('auto-btn');
-          btn.textContent='▶ بدء الأسئلة التلقائية';
-          btn.className='btn btn-warn';
-          btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+          document.getElementById('auto-btn').textContent='▶ بدء الأسئلة';
+          document.getElementById('auto-btn').style.background='#f59e0b';
         } else {
           autoNext();
         }
@@ -541,50 +398,36 @@ function autoNext(){
   },answerTime*1000+3000);
 }
 
-function getRulesList(){return document.getElementById('rules-text').value.split('\n').map(function(s){return s.trim();}).filter(Boolean).slice(0,8);}
-async function showRulesThenRegister(){
-  var rules=getRulesList();
-  if(!rules.length||!username)return;
-  var duration=Math.max(3,Math.min(120,parseInt(document.getElementById('rules-duration').value)||12));
-  await fetch('/api/rules/show',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,game:'knockout',title:'شروط بطولة الخروج',rules,duration})});
-  setBadge('pause','📜 عرض الشروط...');
-  setTimeout(function(){openRegistration();},duration*1000+400);
-}
-async function hideRules(){await fetch('/api/rules/hide',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});}
-
 async function openRegistration(){
   await fetch('/api/knockout/register',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,keyword:document.getElementById('keyword').value.trim(),maxPlayers:parseInt(document.getElementById('max-players').value)||16})});
-  setBadge('live','📝 تسجيل مفتوح');
+  document.getElementById('status-badge').textContent='📝 تسجيل';document.getElementById('status-badge').classList.add('active');
   loadPlayers();
 }
 async function lockRegistration(){
   await fetch('/api/knockout/lock',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});
-  setBadge('pause','🔒 جاهز');
-  loadPlayers();
-  goStep(2);
+  document.getElementById('status-badge').textContent='🔒 جاهز';loadPlayers();
 }
 async function askQ(q,opts,correct){
   var at=parseInt(document.getElementById('answer-time').value)||15;
   await fetch('/api/knockout/ask',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username,question:q,options:opts,correct:correct,answerTime:at})});
-  setBadge('live','❓ سؤال مطروح');
-  goStep(3);
+  document.getElementById('status-badge').textContent='❓ سؤال';
 }
 async function askCustom(){
   var q=document.getElementById('custom-q').value.trim();
   var opts=[document.getElementById('co-1').value.trim(),document.getElementById('co-2').value.trim(),document.getElementById('co-3').value.trim(),document.getElementById('co-4').value.trim()];
-  if(!q||opts.some(function(o){return !o;})){alert('أكمل السؤال والخيارات الأربعة');return;}
+  if(!q||opts.some(function(o){return !o;})){alert('أكمل السؤال');return;}
   await askQ(q,opts,correctAnswer);
 }
 async function nextFromBank(){
-  var pool=QS.map(function(q,i){return{q:q.q,opts:q.opts,correct:q.correct,idx:i};}).filter(function(q){return !usedQs.has(q.idx);});
-  if(!pool.length){usedQs.clear();pool=QS.map(function(q,i){return{q:q.q,opts:q.opts,correct:q.correct,idx:i};});}
+  var pool=QS.map(function(q,i){return{...q,idx:i};}).filter(function(q){return !usedQs.has(q.idx);});
+  if(!pool.length){usedQs.clear();pool=QS.map(function(q,i){return{...q,idx:i};});}
   var pick=pool[Math.floor(Math.random()*pool.length)];
   usedQs.add(pick.idx);
   await askQ(pick.q,pick.opts,pick.correct);
   renderBank();
 }
 async function revealAnswer(){await fetch('/api/knockout/reveal',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});setTimeout(loadPlayers,1000);}
-async function stopGame(){await fetch('/api/knockout/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});setBadge('off','متوقف');}
+async function stopGame(){await fetch('/api/knockout/stop',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username})});document.getElementById('status-badge').textContent='متوقف';document.getElementById('status-badge').classList.remove('active');}
 
 async function loadPlayers(){
   var res=await fetch('/api/knockout/'+username);var data=await res.json();
@@ -598,7 +441,7 @@ async function loadPlayers(){
   el.innerHTML=list.map(function(p){return '<div class="player-item '+(p.alive?'alive':'dead')+'"><span>'+(p.alive?'✅':'❌')+'</span><span class="player-name">'+esc(p.name)+'</span></div>';}).join('');
 }
 function renderBank(){
-  document.getElementById('q-bank').innerHTML=QS.map(function(q,i){return '<div class="q-item '+(usedQs.has(i)?'used':'')+'" onclick="askFromBank('+i+')"><div class="qn">'+(i+1)+'</div><div class="qt">'+esc(q.q)+'</div><div class="qcat">✓ '+esc(q.opts[q.correct-1])+'</div></div>';}).join('');
+  document.getElementById('q-bank').innerHTML=QS.map(function(q,i){return '<div class="q-item '+(usedQs.has(i)?'used':'')+'" onclick="askFromBank('+i+')"><div class="q-item-text">'+esc(q.q)+'</div><div class="q-item-correct">✓ '+esc(q.opts[q.correct-1])+'</div></div>';}).join('');
 }
 async function askFromBank(i){usedQs.add(i);await askQ(QS[i].q,QS[i].opts,QS[i].correct);renderBank();}
 
@@ -607,20 +450,18 @@ socket.on('knockout:reveal',function(d){
   loadPlayers();
   if(d && d.winner){
     autoMode=false;
-    var btn=document.getElementById('auto-btn');
-    btn.textContent='▶ بدء الأسئلة التلقائية';
-    btn.className='btn btn-warn';
-    btn.style.flex='1';btn.style.fontSize='.95rem';btn.style.padding='13px';
+    document.getElementById('auto-btn').textContent='▶ بدء الأسئلة';
+    document.getElementById('auto-btn').style.background='#f59e0b';
     if(autoTimer){clearTimeout(autoTimer);autoTimer=null;}
-    setBadge('pause','🏆 عندنا فائز!');
-    goStep(4);
+    document.getElementById('status-badge').textContent='🏆 فائز!';
   }
 });
 socket.on('knockout:locked',function(){loadPlayers();});
 socket.on('knockout:answered',function(d){
-  setBadge('live','❓ '+d.count+'/'+d.total+' جاوبوا');
+  document.getElementById('status-badge').textContent='❓ '+d.count+'/'+d.total+' جاوبوا';
 });
 renderBank();if(username)loadPlayers();
 </script>
+<script src="/rules-control.js"></script>
 </body>
 </html>

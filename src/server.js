@@ -2181,7 +2181,7 @@ io.on('connection', (socket) => {
   });
 });
 
-const VERSION = 'v2.0.4';
+const VERSION = 'v2.0.5';
 const PORT = process.env.PORT || 3000;
 // ── شبكات أمان على مستوى العملية ─────────────────────────
 // أي خطأ غير معالَج (مثل فشل مصافحة WebSocket بـ 522 من Cloudflare)
